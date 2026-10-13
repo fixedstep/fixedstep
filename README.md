@@ -49,22 +49,23 @@ and is delivered from the database.
 
 ## Local development
 
-Requirements: Node 24, pnpm 10, Docker.
+Requirements: Docker. (Node 24 + pnpm 10 on the host are optional.)
 
 ```sh
-pnpm install
 cp .env.example .env            # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
-pnpm db:up                      # Postgres 17 in Docker
-pnpm db:generate                # first time / after schema changes: create SQL migrations
-pnpm db:migrate
-pnpm content:sync               # validate + load content-sample into the DB
-pnpm dev                        # API on :3000, web on http://localhost:5173
+docker compose up               # postgres + api (:3000) + web (http://localhost:5173), hot reload
+scripts/in-docker.sh pnpm content:sync   # first run: load content-sample (API applies migrations itself)
 ```
 
-Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm content:validate`.
+`scripts/in-docker.sh <cmd>` runs any command in the dev container on the compose network,
+e.g. `scripts/in-docker.sh pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm db:generate`.
 
-No Node on the host? Run any of these through Docker with the repo's pinned toolchain:
-`scripts/in-docker.sh pnpm test` (host networking, so it reaches the compose Postgres).
+To try the production API image (the one ECS runs) against the local database:
+`docker compose --profile prod up --build api-prod` → http://localhost:3001.
+
+Prefer running on the host? `pnpm install && pnpm db:up && pnpm db:migrate && pnpm content:sync && pnpm dev`
+works too. Host and containers share one `node_modules` (and a repo-local `.pnpm-store/`), so you
+can switch freely; just run `docker compose` from the repo root.
 
 ## Deploying
 

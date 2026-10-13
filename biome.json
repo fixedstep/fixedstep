@@ -9,7 +9,9 @@
       "!**/*.gen.ts",
       "!.claude",
       "!.idea",
-      "!.vscode"
+      "!.vscode",
+      "!.pnpm-store",
+      "!.cache"
     ]
   },
   "formatter": {
@@ -30,7 +32,9 @@
   },
   "overrides": [
     {
-      "includes": ["content-sample/**"],
+      "includes": [
+        "content-sample/**"
+      ],
       "linter": {
         "rules": {
           "correctness": {

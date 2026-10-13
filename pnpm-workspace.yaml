@@ -3,5 +3,9 @@ packages:
   - packages/*
   - infra
 
+# Repo-local store, shared by host and Docker installs (see docker-compose.yml): pnpm records the
+# store's absolute path in node_modules and reinstalls everything if it changes.
+storeDir: .pnpm-store
+
 onlyBuiltDependencies:
   - esbuild

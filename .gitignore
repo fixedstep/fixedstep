@@ -21,3 +21,4 @@ CLAUDE.local.md
 .vscode
 .zprofile
 .zshrc
+.pnpm-store/

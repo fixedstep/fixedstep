@@ -1,7 +1,6 @@
+# Top-level dotfiles/dirs: .git, .env*, .cache, .claude, editor config...
+.*
 **/node_modules
 **/dist
 **/cdk.out
-.git
-.env
-.env.*
 content-sample

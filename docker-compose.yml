@@ -1,3 +1,27 @@
+name: fixedstep
+
+# Local development stack.
+#   docker compose up                      # postgres + api (:3000) + web (:5173), hot reload
+#   docker compose run --rm api pnpm content:sync
+#   docker compose --profile prod up api-prod   # production API image on :3001
+
+x-node: &node
+  build:
+    context: docker # the dev image needs no source files; they're bind-mounted
+    dockerfile: dev.Dockerfile
+  image: fixedstep-dev:latest
+  # Run as your host user so files written to the bind mount (node_modules, dist) stay yours.
+  user: "${UID:-1000}:${GID:-1000}"
+  # Mounted at the same absolute path as on the host, so node_modules (which records the absolute
+  # .pnpm-store path) is valid for both host and container pnpm. Run compose from the repo root.
+  working_dir: ${PWD}
+  volumes:
+    - .:${PWD}
+  environment:
+    HOME: ${PWD}/.cache/docker-home
+    # Overrides .env (Node's --env-file never overwrites variables that are already set).
+    DATABASE_URL: postgres://fixedstep:fixedstep@postgres:5432/fixedstep
+
 services:
   postgres:
     image: postgres:17
@@ -14,6 +38,56 @@ services:
       interval: 2s
       timeout: 5s
       retries: 20
+
+  # One-shot: keeps node_modules in sync with the lockfile before the servers start.
+  # confirmModulesPurge=false: a one-time reinstall if node_modules predates the shared store.
+  deps:
+    <<: *node
+    command: >-
+      sh -c '[ -f pnpm-workspace.yaml ] || { echo "run docker compose from the repo root"; exit 1; };
+      pnpm install --frozen-lockfile --config.confirmModulesPurge=false'
+
+  api:
+    <<: *node
+    command: pnpm --filter @fixedstep/api dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  web:
+    <<: *node
+    command: pnpm --filter @fixedstep/web dev --host 0.0.0.0
+    environment:
+      HOME: ${PWD}/.cache/docker-home
+      API_PROXY_TARGET: http://api:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      deps:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
+
+  # The production image (apps/api/Dockerfile) against the local database.
+  api-prod:
+    profiles: [prod]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: fixedstep-api:local
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://fixedstep:fixedstep@postgres:5432/fixedstep
+      GRADER_MODE: local
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:
