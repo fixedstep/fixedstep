@@ -4,7 +4,12 @@ export function TestResults({ result, title }: { result: GradeResult; title: str
   return (
     <section className={`results ${result.status}`}>
       <h3>
-        {title}: {result.status === "passed" ? "✅ passed" : result.status === "failed" ? "❌ failed" : "⚠️ error"}
+        {title}:{" "}
+        {result.status === "passed"
+          ? "✅ passed"
+          : result.status === "failed"
+            ? "❌ failed"
+            : "⚠️ error"}
       </h3>
       {result.error && <pre className="error">{result.error}</pre>}
       <ul>

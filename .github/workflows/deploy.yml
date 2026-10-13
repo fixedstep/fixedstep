@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   deploy:
+    # Skipped until AWS is bootstrapped and the AWS_ACCOUNT_ID repo variable is set.
+    if: vars.AWS_ACCOUNT_ID != ''
     # Native arm64 runner: the API image and Lambdas are arm64 (Graviton), no QEMU needed.
     runs-on: ubuntu-24.04-arm
     environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}

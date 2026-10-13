@@ -14,13 +14,19 @@ const USAGE = `usage:
 
 async function main() {
   const [command, dir, out] = process.argv.slice(2);
-  if (!dir || !["validate", "sync", "bundle"].includes(command ?? "") || (command === "bundle" && !out)) {
+  if (
+    !dir ||
+    !["validate", "sync", "bundle"].includes(command ?? "") ||
+    (command === "bundle" && !out)
+  ) {
     console.error(USAGE);
     process.exit(2);
   }
 
   const courses = await loadContent(resolve(dir));
-  const lessonCount = courses.flatMap((c) => c.chaptersLoaded.flatMap((ch) => ch.lessonsLoaded)).length;
+  const lessonCount = courses.flatMap((c) =>
+    c.chaptersLoaded.flatMap((ch) => ch.lessonsLoaded),
+  ).length;
   console.log(`loaded ${courses.length} course(s), ${lessonCount} lesson(s)`);
 
   const findings = await validateContent(courses);

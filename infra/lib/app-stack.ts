@@ -1,5 +1,12 @@
 import { existsSync } from "node:fs";
-import { Annotations, CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import {
+  Annotations,
+  CfnOutput,
+  Duration,
+  RemovalPolicy,
+  Stack,
+  type StackProps,
+} from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -16,7 +23,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
-import { resourceName, secretName, type StageConfig } from "./config";
+import { resourceName, type StageConfig, secretName } from "./config";
 import { DB_NAME } from "./data-stack";
 import { REPO_ROOT, repoPath } from "./paths";
 
@@ -217,7 +224,9 @@ export class AppStack extends Stack {
         memoryLimit: 512,
       });
     } else {
-      Annotations.of(this).addWarning("apps/web/dist not found; skipping web upload (build the web app first)");
+      Annotations.of(this).addWarning(
+        "apps/web/dist not found; skipping web upload (build the web app first)",
+      );
     }
 
     new CfnOutput(this, "SiteUrl", { value: siteUrl });

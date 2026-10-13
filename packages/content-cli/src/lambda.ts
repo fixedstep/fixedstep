@@ -13,7 +13,9 @@ const s3 = new S3Client({});
 const secrets = new SecretsManagerClient({});
 
 async function databaseUrl(): Promise<string> {
-  const out = await secrets.send(new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN }));
+  const out = await secrets.send(
+    new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN }),
+  );
   const s = JSON.parse(out.SecretString ?? "{}") as Record<string, string | number>;
   const user = encodeURIComponent(String(s.username));
   const pass = encodeURIComponent(String(s.password));

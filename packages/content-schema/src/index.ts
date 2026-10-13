@@ -106,9 +106,7 @@ export const CourseOutline = z.object({
   slug: Slug,
   title: z.string(),
   description: z.string(),
-  chapters: z.array(
-    z.object({ slug: Slug, title: z.string(), lessons: z.array(LessonSummary) }),
-  ),
+  chapters: z.array(z.object({ slug: Slug, title: z.string(), lessons: z.array(LessonSummary) })),
 });
 export type CourseOutline = z.infer<typeof CourseOutline>;
 

@@ -49,7 +49,10 @@ export function lessonRoutes({ db, grader }: Deps) {
     if (!lesson) return c.json({ error: "not found" }, 404);
 
     if (lesson.access === "paid" && !(await hasPro(db, user?.id))) {
-      return c.json({ id: lesson.id, title: lesson.title, locked: true } satisfies LockedLesson, 402);
+      return c.json(
+        { id: lesson.id, title: lesson.title, locked: true } satisfies LockedLesson,
+        402,
+      );
     }
 
     const completed = user
@@ -82,7 +85,8 @@ export function lessonRoutes({ db, grader }: Deps) {
   r.post("/lessons/:id/submit", async (c) => {
     const user = c.get("user");
     if (!user) return c.json({ error: "sign in to submit" }, 401);
-    if (!submitLimit(clientKey(user, c.req.raw.headers))) return c.json({ error: "slow down" }, 429);
+    if (!submitLimit(clientKey(user, c.req.raw.headers)))
+      return c.json({ error: "slow down" }, 429);
 
     const lesson = await findLesson(c.req.param("id"));
     if (!lesson) return c.json({ error: "not found" }, 404);
@@ -98,7 +102,8 @@ export function lessonRoutes({ db, grader }: Deps) {
     if (lesson.kind === "reading") {
       grade = { status: "passed", results: [], durationMs: 0 };
     } else if (lesson.kind === "quiz") {
-      if (!parsed.success || !("answers" in parsed.data)) return c.json({ error: "answers required" }, 400);
+      if (!parsed.success || !("answers" in parsed.data))
+        return c.json({ error: "answers required" }, 400);
       answers = parsed.data.answers;
       const results = (lesson.quiz ?? []).map((q) => {
         const passed = answers?.[q.id] === q.answer;
@@ -112,7 +117,8 @@ export function lessonRoutes({ db, grader }: Deps) {
         durationMs: 0,
       };
     } else {
-      if (!parsed.success || !("code" in parsed.data)) return c.json({ error: "code required" }, 400);
+      if (!parsed.success || !("code" in parsed.data))
+        return c.json({ error: "code required" }, 400);
       code = parsed.data.code;
       grade = await grader({
         code,

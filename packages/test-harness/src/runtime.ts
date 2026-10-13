@@ -71,7 +71,8 @@ export function harnessRuntime(
         if (!_is(actual, expected)) fail(`expected ${show(actual)} to be ${show(expected)}`);
       },
       toEqual(expected: unknown) {
-        if (!deepEqual(actual, expected)) fail(`expected ${show(actual)} to equal ${show(expected)}`);
+        if (!deepEqual(actual, expected))
+          fail(`expected ${show(actual)} to equal ${show(expected)}`);
       },
       toBeCloseTo(expected: number, digits = 4) {
         if (typeof actual !== "number" || !(_abs(actual - expected) < _pow(10, -digits) / 2)) {

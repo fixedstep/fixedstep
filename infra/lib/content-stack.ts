@@ -60,10 +60,8 @@ export class ContentStack extends Stack {
     db.secret?.grantRead(fn);
     db.connections.allowDefaultPortFrom(fn);
     this.bucket.grantRead(fn);
-    this.bucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      new s3n.LambdaDestination(fn),
-      { suffix: ".json" },
-    );
+    this.bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(fn), {
+      suffix: ".json",
+    });
   }
 }

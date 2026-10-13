@@ -13,7 +13,12 @@ export function runTestsInWorker(req: GradeRequest, timeoutMs = 3_000): Promise<
     });
     const timer = setTimeout(() => {
       worker.terminate();
-      resolve({ status: "error", results: [], error: `Timed out after ${timeoutMs}ms`, durationMs: timeoutMs });
+      resolve({
+        status: "error",
+        results: [],
+        error: `Timed out after ${timeoutMs}ms`,
+        durationMs: timeoutMs,
+      });
     }, timeoutMs);
     worker.onmessage = (e: MessageEvent<GradeResult>) => {
       clearTimeout(timer);

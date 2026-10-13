@@ -1,4 +1,4 @@
-import { type Db, activeEntitlementSql, entitlements } from "@fixedstep/db";
+import { activeEntitlementSql, type Db, entitlements } from "@fixedstep/db";
 import { and, eq } from "drizzle-orm";
 
 export async function hasPro(db: Db, userId: string | undefined): Promise<boolean> {

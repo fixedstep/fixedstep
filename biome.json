@@ -1,7 +1,16 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
-    "includes": ["**", "!**/dist", "!**/cdk.out", "!**/drizzle", "!**/*.gen.ts"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/cdk.out",
+      "!**/drizzle",
+      "!**/*.gen.ts",
+      "!.claude",
+      "!.idea",
+      "!.vscode"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
@@ -10,7 +19,7 @@
   },
   "linter": {
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   "javascript": {
@@ -18,5 +27,18 @@
       "quoteStyle": "double",
       "semicolons": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["content-sample/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedFunctionParameters": "off",
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    }
+  ]
 }

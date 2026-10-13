@@ -46,6 +46,9 @@ export const api = {
     }
   },
   submit: (id: string, body: SubmitRequest | Record<string, never>) =>
-    request<SubmitResponse>(`/lessons/${id}/submit`, { method: "POST", body: JSON.stringify(body) }),
+    request<SubmitResponse>(`/lessons/${id}/submit`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   checkout: () => request<{ url: string }>("/billing/checkout", { method: "POST" }),
 };
