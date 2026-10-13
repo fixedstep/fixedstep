@@ -10,3 +10,14 @@ coverage/
 .cache/
 .claude/
 CLAUDE.local.md
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.idea
+.mcp.json
+.profile
+.ripgreprc
+.vscode
+.zprofile
+.zshrc

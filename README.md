@@ -63,6 +63,9 @@ pnpm dev                        # API on :3000, web on http://localhost:5173
 
 Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm content:validate`.
 
+No Node on the host? Run any of these through Docker with the repo's pinned toolchain:
+`scripts/in-docker.sh pnpm test` (host networking, so it reaches the compose Postgres).
+
 ## Deploying
 
 Everything is named `fixedstep-<stage>-<component>` (stacks: `Fixedstep-<Stage>-<Component>`),
