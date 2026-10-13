@@ -29,7 +29,12 @@ function Paywall({ title }: { title: string }) {
     <div className="paywall">
       <h1>🔒 {title}</h1>
       <p>This lesson is part of Fixedstep Pro.</p>
-      <button type="button" className="primary" onClick={() => checkout.mutate()} disabled={checkout.isPending}>
+      <button
+        type="button"
+        className="primary"
+        onClick={() => checkout.mutate()}
+        disabled={checkout.isPending}
+      >
         Upgrade to Pro
       </button>
       {needsLogin && (
@@ -93,7 +98,12 @@ function ReadingFooter({ lesson }: { lesson: PublicLesson }) {
   const submit = useSubmit(lesson.id);
   return (
     <div className="actions">
-      <button type="button" className="primary" onClick={() => submit.mutate({})} disabled={submit.isPending}>
+      <button
+        type="button"
+        className="primary"
+        onClick={() => submit.mutate({})}
+        disabled={submit.isPending}
+      >
         Mark complete
       </button>
       <SubmitFeedback submit={submit} />
@@ -185,7 +195,12 @@ function CodeWorkspace({ lesson }: { lesson: PublicLesson }) {
         <button type="button" onClick={runTests} disabled={running}>
           Run tests
         </button>
-        <button type="button" className="primary" onClick={() => submit.mutate({ code })} disabled={submit.isPending}>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => submit.mutate({ code })}
+          disabled={submit.isPending}
+        >
           Submit{lesson.hasHiddenTests ? " (+ hidden tests)" : ""}
         </button>
         <button type="button" className="link-button" onClick={() => setCode(starter)}>

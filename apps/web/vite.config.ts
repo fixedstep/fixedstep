@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     // Same-origin API in dev, mirroring CloudFront's /api/* behavior in AWS.
-    proxy: { "/api": "http://localhost:3000" },
+    proxy: { "/api": process.env.API_PROXY_TARGET ?? "http://localhost:3000" },
   },
   worker: { format: "es" },
 });

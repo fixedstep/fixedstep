@@ -34,7 +34,10 @@ export function createPolarProvider(opts: {
       if (!opts.accessToken || !opts.proProductId) throw new Error("Polar is not configured");
       const res = await fetch(`${API[opts.server]}/v1/checkouts/`, {
         method: "POST",
-        headers: { authorization: `Bearer ${opts.accessToken}`, "content-type": "application/json" },
+        headers: {
+          authorization: `Bearer ${opts.accessToken}`,
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           products: [opts.proProductId],
           external_customer_id: userId,
@@ -50,7 +53,12 @@ export function createPolarProvider(opts: {
 }
 
 /** https://www.standardwebhooks.com — HMAC-SHA256 over `${id}.${timestamp}.${body}`. */
-export function verifyStandardWebhook(rawBody: string, headers: Headers, secret: string, now = Date.now()) {
+export function verifyStandardWebhook(
+  rawBody: string,
+  headers: Headers,
+  secret: string,
+  now = Date.now(),
+) {
   const id = headers.get("webhook-id");
   const timestamp = headers.get("webhook-timestamp");
   const signatures = headers.get("webhook-signature");
@@ -81,7 +89,10 @@ const STATUS: Record<string, SubscriptionUpdate["status"] | undefined> = {
   canceled: "canceled",
 };
 
-function toBillingEvent(eventId: string, event: { type: string; data: Record<string, unknown> }): BillingEvent {
+function toBillingEvent(
+  eventId: string,
+  event: { type: string; data: Record<string, unknown> },
+): BillingEvent {
   const ignored = { type: "ignored", eventId, rawType: event.type } as const;
   if (!event.type.startsWith("subscription.")) return ignored;
 

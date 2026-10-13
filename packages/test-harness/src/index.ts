@@ -29,9 +29,16 @@ export function transpile(ts: string, filePath: string): string {
 export function buildProgram(req: GradeRequest): string {
   const studentJs = transpile(req.code, "main.ts");
   const tests = [{ js: transpile(req.visibleTests, "tests.ts"), hidden: false }];
-  if (req.hiddenTests) tests.push({ js: transpile(req.hiddenTests, "tests.hidden.ts"), hidden: true });
+  if (req.hiddenTests)
+    tests.push({ js: transpile(req.hiddenTests, "tests.hidden.ts"), hidden: true });
   const seed = req.seed ?? 1;
-  return `(${harnessRuntime.toString()})(${JSON.stringify(studentJs)}, ${JSON.stringify(tests)}, ${seed});`;
+  // Bundlers with keepNames (tsx, esbuild) wrap inner functions as `__name(fn, "name")`, a helper
+  // that doesn't exist once the runtime is serialized. Provide it in a closure, not as a global:
+  // the runtime calls it lazily (inside expect()), and student code must not be able to replace it.
+  return `(function () {
+  const __name = (target) => target;
+  return (${harnessRuntime.toString()})(${JSON.stringify(studentJs)}, ${JSON.stringify(tests)}, ${seed});
+})();`;
 }
 
 /** Transpile, run in the given sandbox, and normalize into a GradeResult. */

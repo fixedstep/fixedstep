@@ -17,8 +17,12 @@ export function Layout() {
         <nav className="topbar-right">
           {me.data?.user ? (
             <>
-              <span className="stat" title="Day streak">🔥 {me.data.streak}</span>
-              <span className="stat" title="Experience">⭐ {me.data.xp} XP</span>
+              <span className="stat" title="Day streak">
+                🔥 {me.data.streak}
+              </span>
+              <span className="stat" title="Experience">
+                ⭐ {me.data.xp} XP
+              </span>
               {me.data.pro && <span className="badge">PRO</span>}
               <button
                 type="button"

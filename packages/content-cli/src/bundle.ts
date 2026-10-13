@@ -28,7 +28,9 @@ export function serializeBundle(courses: LoadedCourse[]): string {
 export function parseBundle(json: string): ContentBundle {
   const bundle = JSON.parse(json) as ContentBundle;
   if (bundle.version !== BUNDLE_VERSION) {
-    throw new Error(`unsupported bundle version ${bundle.version}; deploy the matching platform first`);
+    throw new Error(
+      `unsupported bundle version ${bundle.version}; deploy the matching platform first`,
+    );
   }
   return bundle;
 }

@@ -2,7 +2,7 @@ import { Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import type { Construct } from "constructs";
-import { resourceName, secretName, type StageConfig } from "./config";
+import { resourceName, type StageConfig, secretName } from "./config";
 
 export const DB_NAME = "fixedstep";
 

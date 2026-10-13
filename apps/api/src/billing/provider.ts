@@ -14,11 +14,17 @@ export type SubscriptionUpdate = {
   currentPeriodEnd: Date | null;
 };
 
-export type BillingEvent = SubscriptionUpdate | { type: "ignored"; eventId: string; rawType: string };
+export type BillingEvent =
+  | SubscriptionUpdate
+  | { type: "ignored"; eventId: string; rawType: string };
 
 export interface BillingProvider {
   readonly name: string;
   /** Verifies the signature and parses the event. Throws on an invalid signature. */
   parseWebhook(rawBody: string, headers: Headers): BillingEvent;
-  createCheckout(opts: { userId: string; email: string; successUrl: string }): Promise<{ url: string }>;
+  createCheckout(opts: {
+    userId: string;
+    email: string;
+    successUrl: string;
+  }): Promise<{ url: string }>;
 }

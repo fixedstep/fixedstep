@@ -19,4 +19,3 @@ export async function runMigrations(url: string, migrationsFolder = MIGRATIONS_F
     await db.$client.end();
   }
 }
-

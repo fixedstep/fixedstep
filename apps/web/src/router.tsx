@@ -8,7 +8,11 @@ const rootRoute = createRootRoute({ component: Layout });
 
 const routeTree = rootRoute.addChildren([
   createRoute({ getParentRoute: () => rootRoute, path: "/", component: CatalogPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: "/lessons/$lessonId", component: LessonPage }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/lessons/$lessonId",
+    component: LessonPage,
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: "/login", component: LoginPage }),
 ]);
 

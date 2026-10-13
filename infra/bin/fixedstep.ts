@@ -11,7 +11,10 @@ const app = new App();
 const env = { account: process.env.CDK_DEFAULT_ACCOUNT, region: REGION };
 
 // Account-level, deployed once: `pnpm cdk deploy Fixedstep-GithubOidc`
-const oidc = new GithubOidcStack(app, "Fixedstep-GithubOidc", { stackName: "Fixedstep-GithubOidc", env });
+const oidc = new GithubOidcStack(app, "Fixedstep-GithubOidc", {
+  stackName: "Fixedstep-GithubOidc",
+  env,
+});
 
 // Stage stacks: `pnpm cdk deploy -c stage=staging --all`
 const stageName = app.node.tryGetContext("stage") as Stage | undefined;

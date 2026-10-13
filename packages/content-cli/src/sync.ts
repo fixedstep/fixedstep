@@ -1,4 +1,4 @@
-import { type Db, chapters, courses, lessons } from "@fixedstep/db";
+import { chapters, courses, type Db, lessons } from "@fixedstep/db";
 import { and, eq, isNull, notInArray } from "drizzle-orm";
 import type { LoadedCourse } from "./load";
 

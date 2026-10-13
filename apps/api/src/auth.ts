@@ -1,4 +1,4 @@
-import { type Db, account, session, user, verification } from "@fixedstep/db";
+import { account, type Db, session, user, verification } from "@fixedstep/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { Env } from "./env";

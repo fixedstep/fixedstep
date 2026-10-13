@@ -33,7 +33,11 @@ function load(code: string): Game {
     require,
   );
   const game = module.exports as Partial<Game>;
-  if (typeof game.init !== "function" || typeof game.update !== "function" || typeof game.render !== "function") {
+  if (
+    typeof game.init !== "function" ||
+    typeof game.update !== "function" ||
+    typeof game.render !== "function"
+  ) {
     throw new Error("export init(), update(state, dt, input) and render(ctx, state)");
   }
   return game as Game;

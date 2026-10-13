@@ -31,7 +31,12 @@ export function billingRoutes({ db, billing, env }: Deps) {
     // Idempotency: providers retry, so each event id is processed once.
     const inserted = await db
       .insert(billingEvents)
-      .values({ id: event.eventId, provider: billing.name, type: event.rawType, payload: JSON.parse(raw) })
+      .values({
+        id: event.eventId,
+        provider: billing.name,
+        type: event.rawType,
+        payload: JSON.parse(raw),
+      })
       .onConflictDoNothing()
       .returning({ id: billingEvents.id });
     if (inserted.length === 0) return c.json({ ok: true, duplicate: true });
@@ -46,8 +51,16 @@ export function billingRoutes({ db, billing, env }: Deps) {
       };
       await db
         .insert(entitlements)
-        .values({ kind: "pro", provider: billing.name, externalId: event.subscriptionId, ...values })
-        .onConflictDoUpdate({ target: [entitlements.provider, entitlements.externalId], set: values });
+        .values({
+          kind: "pro",
+          provider: billing.name,
+          externalId: event.subscriptionId,
+          ...values,
+        })
+        .onConflictDoUpdate({
+          target: [entitlements.provider, entitlements.externalId],
+          set: values,
+        });
     }
     await db
       .update(billingEvents)

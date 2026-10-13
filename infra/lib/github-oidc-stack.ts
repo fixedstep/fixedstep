@@ -63,9 +63,7 @@ export class GithubOidcStack extends Stack {
       content.addToPolicy(
         new iam.PolicyStatement({
           actions: ["s3:PutObject"],
-          resources: [
-            `arn:aws:s3:::${resourceName(stage, "content-bundles")}-${this.account}/*`,
-          ],
+          resources: [`arn:aws:s3:::${resourceName(stage, "content-bundles")}-${this.account}/*`],
         }),
       );
     }
