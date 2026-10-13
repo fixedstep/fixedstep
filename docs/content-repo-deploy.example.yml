@@ -1,0 +1,50 @@
+# Copy into the PRIVATE content repo as .github/workflows/deploy.yml.
+# It checks out the public platform repo for the content CLI, validates every lesson
+# (solutions must pass their tests in the production QuickJS grader), bundles, and uploads.
+# Upload triggers the in-VPC sync Lambda. The content repo never holds DB credentials.
+name: Publish content
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'pull_request' && '' || (startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging') }}
+    env:
+      STAGE: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: content
+      - uses: actions/checkout@v4
+        with:
+          repository: fixedstep/fixedstep # TODO: your public platform repo
+          path: platform
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: platform/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: platform/.nvmrc
+      - run: pnpm install --frozen-lockfile
+        working-directory: platform
+      - name: Validate and bundle
+        working-directory: platform
+        run: pnpm --filter @fixedstep/content-cli start bundle "$GITHUB_WORKSPACE/content" "$GITHUB_WORKSPACE/bundle.json"
+      - if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/fixedstep-${{ env.STAGE }}-github-content-publisher
+          aws-region: us-east-1
+      - if: github.event_name != 'pull_request'
+        run: |
+          aws s3 cp bundle.json \
+            "s3://fixedstep-${STAGE}-content-bundles-${{ vars.AWS_ACCOUNT_ID }}/bundles/${GITHUB_SHA}.json"

@@ -1,0 +1,19 @@
+{
+  "name": "@fixedstep/test-harness",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": {
+    ".": "./src/index.ts",
+    "./quickjs": "./src/quickjs.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@fixedstep/content-schema": "workspace:*",
+    "quickjs-emscripten": "^0.32.0",
+    "sucrase": "^3.35.1"
+  }
+}

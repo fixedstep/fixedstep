@@ -1,0 +1,7 @@
+slug: 2d-fundamentals
+title: 2D Game Fundamentals
+description: Build the core of every 2D game from scratch — the game loop, movement, collision and input — in TypeScript on an HTML canvas.
+position: 0
+published: true
+chapters:
+  - game-loop

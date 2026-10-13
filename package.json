@@ -1,0 +1,31 @@
+{
+  "name": "fixedstep",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @fixedstep/api --filter @fixedstep/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "db:up": "docker compose up -d postgres",
+    "db:generate": "pnpm --filter @fixedstep/db generate",
+    "db:migrate": "pnpm --filter @fixedstep/db migrate",
+    "content:validate": "pnpm --filter @fixedstep/content-cli start validate ../../content-sample",
+    "content:sync": "pnpm --filter @fixedstep/content-cli start sync ../../content-sample",
+    "cdk": "pnpm --filter @fixedstep/infra cdk"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}
