@@ -166,7 +166,19 @@ main {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  background: var(--cm-bg, var(--surface));
+}
+.theme-picker {
+  margin-left: auto;
+  font-size: 13px;
+}
+.theme-picker select {
+  font: inherit;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
   background: var(--surface);
+  color: var(--text);
 }
 .editor .cm-editor {
   min-height: 280px;
@@ -280,4 +292,64 @@ main {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
+}
+
+.editor-compact .cm-editor {
+  min-height: 200px;
+  max-height: 420px;
+}
+.playground {
+  margin: 20px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.playground-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 700px) {
+  .playground-main {
+    grid-template-columns: 1fr;
+  }
+}
+.playground-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.playground .preview-canvas {
+  min-height: 0;
+}
+.tweaks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tweaks label {
+  display: grid;
+  grid-template-columns: minmax(80px, auto) 1fr 4.5em;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+.tweak-name {
+  font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+}
+.tweaks input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.tweaks output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.playground-hint {
+  font-size: 13px;
 }
