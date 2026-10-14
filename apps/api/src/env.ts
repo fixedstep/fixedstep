@@ -25,7 +25,8 @@ const Env = z
     POLAR_SERVER: z.enum(["sandbox", "production"]).default("sandbox"),
     POLAR_ACCESS_TOKEN: z.string().optional(),
     POLAR_WEBHOOK_SECRET: z.string().optional(),
-    POLAR_PRO_PRODUCT_ID: z.string().optional(),
+    POLAR_PRO_MONTHLY_PRODUCT_ID: z.string().optional(),
+    POLAR_PRO_YEARLY_PRODUCT_ID: z.string().optional(),
   })
   .transform((e, ctx) => {
     const databaseUrl =

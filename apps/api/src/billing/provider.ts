@@ -14,6 +14,9 @@ export type SubscriptionUpdate = {
   currentPeriodEnd: Date | null;
 };
 
+export type BillingInterval = "month" | "year";
+export const BILLING_INTERVALS: readonly BillingInterval[] = ["month", "year"];
+
 export type BillingEvent =
   | SubscriptionUpdate
   | { type: "ignored"; eventId: string; rawType: string };
@@ -22,9 +25,12 @@ export interface BillingProvider {
   readonly name: string;
   /** Verifies the signature and parses the event. Throws on an invalid signature. */
   parseWebhook(rawBody: string, headers: Headers): BillingEvent;
+  /** Whether a Pro plan is configured for this billing interval. */
+  supports(interval: BillingInterval): boolean;
   createCheckout(opts: {
     userId: string;
     email: string;
     successUrl: string;
+    interval: BillingInterval;
   }): Promise<{ url: string }>;
 }

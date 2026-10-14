@@ -2,6 +2,7 @@ import { billingEvents, entitlements } from "@fixedstep/db";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { WebhookVerificationError } from "../billing/polar";
+import { BILLING_INTERVALS, type BillingInterval } from "../billing/provider";
 import type { AppEnv, Deps } from "../context";
 
 export function billingRoutes({ db, billing, env }: Deps) {
@@ -10,10 +11,17 @@ export function billingRoutes({ db, billing, env }: Deps) {
   r.post("/billing/checkout", async (c) => {
     const user = c.get("user");
     if (!user) return c.json({ error: "sign in first" }, 401);
+    const body = (await c.req.json().catch(() => ({}))) as { interval?: unknown };
+    const interval = (body.interval ?? "month") as BillingInterval;
+    if (!BILLING_INTERVALS.includes(interval)) return c.json({ error: "unknown interval" }, 400);
+    if (!billing.supports(interval)) {
+      return c.json({ error: `${interval}ly billing isn't available yet` }, 409);
+    }
     const { url } = await billing.createCheckout({
       userId: user.id,
       email: user.email,
       successUrl: `${env.WEB_ORIGIN}/?checkout=success`,
+      interval,
     });
     return c.json({ url });
   });

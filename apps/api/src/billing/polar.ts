@@ -1,5 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { BillingEvent, BillingProvider, SubscriptionUpdate } from "./provider";
+import type {
+  BillingEvent,
+  BillingInterval,
+  BillingProvider,
+  SubscriptionUpdate,
+} from "./provider";
 
 const API = { sandbox: "https://sandbox-api.polar.sh", production: "https://api.polar.sh" };
 const TOLERANCE_SECONDS = 5 * 60;
@@ -10,6 +15,9 @@ export class WebhookVerificationError extends Error {}
  * Polar via its REST API, without the SDK (the SDK's API surface is date-versioned and
  * moves quickly). Webhooks follow the Standard Webhooks spec.
  *
+ * Polar products have a single recurring price, so monthly and yearly Pro are two products.
+ * Both grant the same "pro" entitlement; webhooks don't care which one was bought.
+ *
  * TODO(before launch): verify the checkout request body and webhook payload field names
  * against the Polar API version you pin, and test end-to-end in the Polar sandbox.
  */
@@ -17,8 +25,10 @@ export function createPolarProvider(opts: {
   server: "sandbox" | "production";
   accessToken?: string;
   webhookSecret?: string;
-  proProductId?: string;
+  /** Polar product id per billing interval; an interval without one can't be bought. */
+  proProductIds: Partial<Record<BillingInterval, string>>;
 }): BillingProvider {
+  const productFor = (interval: BillingInterval) => opts.proProductIds[interval] || undefined;
   return {
     name: "polar",
 
@@ -30,8 +40,15 @@ export function createPolarProvider(opts: {
       return toBillingEvent(eventId, event);
     },
 
-    async createCheckout({ userId, email, successUrl }) {
-      if (!opts.accessToken || !opts.proProductId) throw new Error("Polar is not configured");
+    supports(interval) {
+      return Boolean(opts.accessToken && productFor(interval));
+    },
+
+    async createCheckout({ userId, email, successUrl, interval }) {
+      const productId = productFor(interval);
+      if (!opts.accessToken || !productId) {
+        throw new Error(`Polar is not configured for ${interval}ly billing`);
+      }
       const res = await fetch(`${API[opts.server]}/v1/checkouts/`, {
         method: "POST",
         headers: {
@@ -39,7 +56,7 @@ export function createPolarProvider(opts: {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          products: [opts.proProductId],
+          products: [productId],
           external_customer_id: userId,
           customer_email: email,
           success_url: successUrl,

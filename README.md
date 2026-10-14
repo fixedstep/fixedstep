@@ -79,8 +79,10 @@ One-time setup, per stage (`staging`, then `prod`), with that account's credenti
 2. `pnpm cdk bootstrap aws://<account>/us-east-1`
 3. `pnpm cdk deploy -c stage=<stage> --all` (the first deploy also creates the
    `Fixedstep-<Stage>-GithubOidc` roles CI uses from then on). Commit `infra/cdk.context.json`.
-4. Fill in `fixedstep/<stage>/api` in Secrets Manager (Polar, GitHub OAuth) and force a new ECS
-   deployment.
+4. Fill in `fixedstep/<stage>/api` in Secrets Manager (Polar token, webhook secret and the monthly
+   and yearly Pro product ids; GitHub OAuth) and force a new ECS deployment. Never edit that
+   secret's template in `infra/lib/app-stack.ts` after it exists: CloudFormation would regenerate
+   the secret and wipe the values.
 
 Then in GitHub: create `staging` (limited to `main`) and `production` (required reviewers,
 `v*` tags) environments, set an `AWS_ACCOUNT_ID` variable on each, and set the repository

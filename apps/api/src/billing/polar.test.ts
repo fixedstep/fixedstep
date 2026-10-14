@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
-import { expect, it } from "vitest";
-import { verifyStandardWebhook, WebhookVerificationError } from "./polar";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createPolarProvider, verifyStandardWebhook, WebhookVerificationError } from "./polar";
 
 const secret = "test-secret";
 const body = '{"type":"subscription.active","data":{}}';
@@ -31,4 +31,32 @@ it("rejects stale timestamps", () => {
   expect(() =>
     verifyStandardWebhook(body, headersFor(body, now / 1000 - 3600), secret, now),
   ).toThrow(/tolerance/);
+});
+
+describe("createCheckout", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const provider = (proProductIds: { month?: string; year?: string }) =>
+    createPolarProvider({ server: "sandbox", accessToken: "tok", proProductIds });
+
+  it("uses the product for the chosen interval", async () => {
+    const fetch = vi.fn(async () => Response.json({ url: "https://polar.test/c/1" }));
+    vi.stubGlobal("fetch", fetch);
+    const p = provider({ month: "prod_month", year: "prod_year" });
+    const opts = { userId: "u1", email: "a@b.c", successUrl: "https://x/" };
+
+    await p.createCheckout({ ...opts, interval: "year" });
+    await p.createCheckout({ ...opts, interval: "month" });
+
+    const products = fetch.mock.calls.map(
+      (call) => JSON.parse(String((call as unknown as [string, RequestInit])[1].body)).products,
+    );
+    expect(products).toEqual([["prod_year"], ["prod_month"]]);
+  });
+
+  it("reports an interval without a product as unsupported", () => {
+    const p = provider({ month: "prod_month", year: "" });
+    expect(p.supports("month")).toBe(true);
+    expect(p.supports("year")).toBe(false);
+  });
 });

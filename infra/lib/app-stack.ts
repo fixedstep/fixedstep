@@ -80,6 +80,8 @@ export class AppStack extends Stack {
 
     // --- API secrets ----------------------------------------------------------------------------
     // Fill in the empty values in the console after the first deploy (or with the CLI).
+    // WARNING: once deployed, don't edit this template. CloudFormation regenerates the secret
+    // when it changes, wiping every filled-in value and rotating BETTER_AUTH_SECRET.
     const appSecret = new secretsmanager.Secret(this, "ApiSecret", {
       secretName: secretName(stage, "api"),
       generateSecretString: {
@@ -88,7 +90,8 @@ export class AppStack extends Stack {
           GITHUB_CLIENT_SECRET: "",
           POLAR_ACCESS_TOKEN: "",
           POLAR_WEBHOOK_SECRET: "",
-          POLAR_PRO_PRODUCT_ID: "",
+          POLAR_PRO_MONTHLY_PRODUCT_ID: "",
+          POLAR_PRO_YEARLY_PRODUCT_ID: "",
         }),
         generateStringKey: "BETTER_AUTH_SECRET",
         passwordLength: 48,
@@ -152,7 +155,8 @@ export class AppStack extends Stack {
               "GITHUB_CLIENT_SECRET",
               "POLAR_ACCESS_TOKEN",
               "POLAR_WEBHOOK_SECRET",
-              "POLAR_PRO_PRODUCT_ID",
+              "POLAR_PRO_MONTHLY_PRODUCT_ID",
+              "POLAR_PRO_YEARLY_PRODUCT_ID",
             ].map((k) => [k, ecs.Secret.fromSecretsManager(appSecret, k)]),
           ),
         },

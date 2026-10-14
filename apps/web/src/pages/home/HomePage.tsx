@@ -255,7 +255,7 @@ function Pricing() {
           <button
             type="button"
             className="primary"
-            onClick={() => checkout.mutate()}
+            onClick={() => checkout.mutate(yearly ? "year" : "month")}
             disabled={checkout.isPending}
           >
             Upgrade to Pro
@@ -266,7 +266,11 @@ function Pricing() {
             </p>
           )}
           {checkout.isError && !needsLogin && (
-            <p className="error">Couldn't start checkout. Try again.</p>
+            <p className="error">
+              {checkout.error instanceof ApiError && checkout.error.status === 409
+                ? `${yearly ? "Yearly" : "Monthly"} billing isn't available yet.`
+                : "Couldn't start checkout. Try again."}
+            </p>
           )}
         </div>
       </div>

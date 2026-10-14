@@ -23,7 +23,10 @@ const app = createApp({
     server: env.POLAR_SERVER,
     accessToken: env.POLAR_ACCESS_TOKEN,
     webhookSecret: env.POLAR_WEBHOOK_SECRET,
-    proProductId: env.POLAR_PRO_PRODUCT_ID,
+    proProductIds: {
+      month: env.POLAR_PRO_MONTHLY_PRODUCT_ID,
+      year: env.POLAR_PRO_YEARLY_PRODUCT_ID,
+    },
   }),
 });
 
