@@ -69,19 +69,23 @@ can switch freely; just run `docker compose` from the repo root.
 
 ## Deploying
 
+Each stage is its own AWS account (in one AWS Organization), so staging can't touch prod.
 Everything is named `fixedstep-<stage>-<component>` (stacks: `Fixedstep-<Stage>-<Component>`),
 tagged `App=fixedstep` and `Stage=<stage>`. Secrets live under `fixedstep/<stage>/…`.
 
-One-time setup:
+One-time setup, per stage (`staging`, then `prod`), with that account's credentials:
 
-1. `pnpm cdk bootstrap aws://<account>/us-east-1`
-2. Set `GITHUB` repo names in `infra/lib/config.ts`, then
-   `pnpm cdk deploy Fixedstep-GithubOidc`
-3. In GitHub, create `staging` (limited to `main`) and `production` (required reviewers,
-   `v*` tags) environments, and set repository variable `AWS_ACCOUNT_ID`.
-4. First deploy, then fill in `fixedstep/<stage>/api` in Secrets Manager (Polar, GitHub
-   OAuth) and force a new ECS deployment.
-5. Once the `fixedstep.dev` Route 53 zone exists, uncomment `domain` in `infra/lib/config.ts`.
+1. Set the stage's `account` in `infra/lib/config.ts` (CDK then refuses other credentials).
+2. `pnpm cdk bootstrap aws://<account>/us-east-1`
+3. `pnpm cdk deploy -c stage=<stage> --all` (the first deploy also creates the
+   `Fixedstep-<Stage>-GithubOidc` roles CI uses from then on). Commit `infra/cdk.context.json`.
+4. Fill in `fixedstep/<stage>/api` in Secrets Manager (Polar, GitHub OAuth) and force a new ECS
+   deployment.
+
+Then in GitHub: create `staging` (limited to `main`) and `production` (required reviewers,
+`v*` tags) environments, set an `AWS_ACCOUNT_ID` variable on each, and set the repository
+variable `DEPLOY_ENABLED=true`. Once the domain's Route 53 hosted zone exists (in that stage's
+account), uncomment `domain` in `infra/lib/config.ts`.
 
 After that: merging to `main` deploys **staging**, and pushing a `v*` tag deploys **prod**
 (after approval). Content is published by the private content repo's own workflow (see

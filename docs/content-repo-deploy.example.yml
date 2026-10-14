@@ -2,6 +2,7 @@
 # It checks out the public platform repo for the content CLI, validates every lesson
 # (solutions must pass their tests in the production QuickJS grader), bundles, and uploads.
 # Upload triggers the in-VPC sync Lambda. The content repo never holds DB credentials.
+# Set AWS_ACCOUNT_ID as an *environment* variable on `staging` and `production` (one account each).
 name: Publish content
 
 on:
@@ -26,7 +27,7 @@ jobs:
           path: content
       - uses: actions/checkout@v4
         with:
-          repository: fixedstep/fixedstep # TODO: your public platform repo
+          repository: timmendenhall/fixedstep
           path: platform
       - uses: pnpm/action-setup@v4
         with:

@@ -9,6 +9,7 @@ import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import type { Construct } from "constructs";
 import { resourceName, type StageConfig } from "./config";
 import { DB_NAME } from "./data-stack";
+import { DbAccess } from "./db-access";
 import { ESM_BANNER, REPO_ROOT, repoPath } from "./paths";
 
 /**
@@ -58,7 +59,7 @@ export class ContentStack extends Stack {
       bundling: { format: nodejs.OutputFormat.ESM, target: "node24", banner: ESM_BANNER },
     });
     db.secret?.grantRead(fn);
-    db.connections.allowDefaultPortFrom(fn);
+    new DbAccess(this, "DbAccess", db, fn);
     this.bucket.grantRead(fn);
     this.bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(fn), {
       suffix: ".json",

@@ -25,6 +25,7 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
 import { resourceName, type StageConfig, secretName } from "./config";
 import { DB_NAME } from "./data-stack";
+import { DbAccess } from "./db-access";
 import { REPO_ROOT, repoPath } from "./paths";
 
 /** Rewrites extension-less paths to /index.html so the SPA router handles them. */
@@ -159,7 +160,7 @@ export class AppStack extends Stack {
     });
     api.targetGroup.configureHealthCheck({ path: "/health", healthyThresholdCount: 2 });
     api.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "15");
-    db.connections.allowDefaultPortFrom(api.service);
+    new DbAccess(this, "DbAccess", db, api.service);
     grader.grantInvoke(api.taskDefinition.taskRole);
 
     // --- CloudFront ---------------------------------------------------------------------------------
