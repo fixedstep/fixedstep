@@ -32,6 +32,9 @@ and is delivered from the database.
   solutions, and quiz answers never leave the server. Lesson reads are rate limited.
 - **Billing** goes through Polar (merchant of record) behind a `BillingProvider` interface.
   The app only ever reads its own `entitlements` table.
+- **Email** (verification, password reset) goes behind an `EmailProvider` interface: Amazon
+  SES in AWS (a domain identity with DKIM in the stage's hosted zone), or logged to the console
+  in dev and on stages without a domain.
 
 ## Repository layout
 
@@ -87,7 +90,10 @@ One-time setup, per stage (`staging`, then `prod`), with that account's credenti
 Then in GitHub: create `staging` (limited to `main`) and `production` (required reviewers,
 `v*` tags) environments, set an `AWS_ACCOUNT_ID` variable on each, and set the repository
 variable `DEPLOY_ENABLED=true`. Once the domain's Route 53 hosted zone exists (in that stage's
-account), uncomment `domain` in `infra/lib/config.ts`.
+account), uncomment `domain` in `infra/lib/config.ts`. The next deploy creates the SES
+identity and DKIM records and switches that stage from logging emails to sending them. New
+accounts start in the SES sandbox (verified recipients only), so request SES production access
+for each stage's account before launch.
 
 After that: merging to `main` deploys **staging**, and pushing a `v*` tag deploys **prod**
 (after approval). Content is published by the private content repo's own workflow (see

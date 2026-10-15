@@ -11,6 +11,11 @@ export function billingRoutes({ db, billing, env }: Deps) {
   r.post("/billing/checkout", async (c) => {
     const user = c.get("user");
     if (!user) return c.json({ error: "sign in first" }, 401);
+    // A verified address is known to receive mail; Polar rejects checkouts whose email domain
+    // can't (422), and receipts and the customer portal link go to this address.
+    if (!user.emailVerified) {
+      return c.json({ error: "verify your email first", code: "email_unverified" }, 403);
+    }
     const body = (await c.req.json().catch(() => ({}))) as { interval?: unknown };
     const interval = (body.interval ?? "month") as BillingInterval;
     if (!BILLING_INTERVALS.includes(interval)) return c.json({ error: "unknown interval" }, 400);

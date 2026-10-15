@@ -27,6 +27,11 @@ const Env = z
     POLAR_WEBHOOK_SECRET: z.string().optional(),
     POLAR_PRO_MONTHLY_PRODUCT_ID: z.string().optional(),
     POLAR_PRO_YEARLY_PRODUCT_ID: z.string().optional(),
+
+    /** "log" prints emails (dev, or a stage without a verified SES identity). */
+    EMAIL_PROVIDER: z.enum(["log", "ses"]).default("log"),
+    /** Sender, e.g. `Fixedstep <noreply@fixedstep.com>`; must be on a verified SES identity. */
+    EMAIL_FROM: z.string().optional(),
   })
   .transform((e, ctx) => {
     const databaseUrl =
@@ -40,6 +45,10 @@ const Env = z
     }
     if (e.GRADER_MODE === "lambda" && !e.GRADER_FUNCTION_NAME) {
       ctx.addIssue({ code: "custom", message: "GRADER_FUNCTION_NAME is required in lambda mode" });
+      return z.NEVER;
+    }
+    if (e.EMAIL_PROVIDER === "ses" && !e.EMAIL_FROM) {
+      ctx.addIssue({ code: "custom", message: "EMAIL_FROM is required when EMAIL_PROVIDER=ses" });
       return z.NEVER;
     }
     return { ...e, DATABASE_URL: databaseUrl };

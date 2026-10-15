@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Playground } from "../../components/Playground";
 import { ApiError, api, type Me } from "../../lib/api";
+import { authClient } from "../../lib/auth-client";
 import { allLessons, CourseCatalog, courseProgress } from "./CourseCatalog";
 import { FAQ, GITHUB_URL, PRICING, ROADMAP, STEPS } from "./content";
 import heroDemo from "./hero-demo.ts?raw";
@@ -199,6 +200,9 @@ function Pricing() {
     onSuccess: ({ url }) => window.location.assign(url),
   });
   const needsLogin = checkout.error instanceof ApiError && checkout.error.status === 401;
+  const needsVerify =
+    checkout.error instanceof ApiError &&
+    (checkout.error.body as { code?: string } | null)?.code === "email_unverified";
 
   return (
     <section id="pricing" className="home-section">
@@ -265,7 +269,8 @@ function Pricing() {
               <Link to="/login">Sign in</Link> first, then upgrade.
             </p>
           )}
-          {checkout.isError && !needsLogin && (
+          {needsVerify && <VerifyEmailPrompt />}
+          {checkout.isError && !needsLogin && !needsVerify && (
             <p className="error">
               {checkout.error instanceof ApiError && checkout.error.status === 409
                 ? `${yearly ? "Yearly" : "Monthly"} billing isn't available yet.`
@@ -275,6 +280,36 @@ function Pricing() {
         </div>
       </div>
     </section>
+  );
+}
+
+function VerifyEmailPrompt() {
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const email = me.data?.user?.email;
+  const resend = useMutation({
+    mutationFn: async () => {
+      if (!email) throw new Error("not signed in");
+      const res = await authClient.sendVerificationEmail({ email, callbackURL: "/#pricing" });
+      if (res.error) throw new Error(res.error.message);
+    },
+  });
+
+  return (
+    <p className="muted">
+      Verify your email before upgrading. Check {email ?? "your inbox"} for the link
+      {resend.isSuccess ? " (sent again)." : ", or "}
+      {!resend.isSuccess && (
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => resend.mutate()}
+          disabled={resend.isPending}
+        >
+          send it again
+        </button>
+      )}
+      {resend.isError && <span className="error"> Couldn't send it. Try again.</span>}
+    </p>
   );
 }
 

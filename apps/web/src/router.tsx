@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { HomePage } from "./pages/home/HomePage";
 import { LessonPage } from "./pages/LessonPage";
 import { LoginPage } from "./pages/LoginPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 
 const rootRoute = createRootRoute({ component: Layout });
 
@@ -14,6 +15,11 @@ const routeTree = rootRoute.addChildren([
     component: LessonPage,
   }),
   createRoute({ getParentRoute: () => rootRoute, path: "/login", component: LoginPage }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/reset-password",
+    component: ResetPasswordPage,
+  }),
 ]);
 
 export const router = createRouter({ routeTree });

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.1150.0",
+    "@aws-sdk/client-sesv2": "^3.1152.0",
     "@fixedstep/content-schema": "workspace:*",
     "@fixedstep/db": "workspace:*",
     "@fixedstep/test-harness": "workspace:*",
