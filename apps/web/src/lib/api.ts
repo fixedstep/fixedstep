@@ -55,4 +55,5 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ interval }),
     }),
+  portal: () => request<{ url: string }>("/billing/portal", { method: "POST" }),
 };

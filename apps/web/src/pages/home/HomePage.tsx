@@ -2,6 +2,7 @@ import type { CourseOutline } from "@fixedstep/content-schema";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { ManageBillingButton } from "../../components/ManageBillingButton";
 import { Playground } from "../../components/Playground";
 import { ApiError, api, type Me } from "../../lib/api";
 import { authClient } from "../../lib/auth-client";
@@ -165,6 +166,11 @@ function ContinuePanel({ me, courses }: { me: Me; courses: CourseOutline[] }) {
         <div>
           <dt>Plan</dt>
           <dd>{me.pro ? "Pro" : "Free"}</dd>
+          {me.pro && (
+            <dd>
+              <ManageBillingButton />
+            </dd>
+          )}
         </div>
       </dl>
     </section>

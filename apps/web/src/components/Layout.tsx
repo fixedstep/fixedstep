@@ -3,6 +3,7 @@ import { Link, Outlet } from "@tanstack/react-router";
 import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
 import { GITHUB_URL } from "../pages/home/content";
+import { ManageBillingButton } from "./ManageBillingButton";
 
 export function Layout() {
   const qc = useQueryClient();
@@ -24,7 +25,12 @@ export function Layout() {
               <span className="stat" title="Experience">
                 ⭐ {me.data.xp} XP
               </span>
-              {me.data.pro && <span className="badge">PRO</span>}
+              {me.data.pro && (
+                <>
+                  <span className="badge">PRO</span>
+                  <ManageBillingButton />
+                </>
+              )}
               <button
                 type="button"
                 className="link-button"

@@ -66,6 +66,22 @@ export function createPolarProvider(opts: {
       const body = (await res.json()) as { url: string };
       return { url: body.url };
     },
+
+    async createPortalSession({ userId, returnUrl }) {
+      if (!opts.accessToken) throw new Error("Polar is not configured");
+      const res = await fetch(`${API[opts.server]}/v1/customer-sessions/`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${opts.accessToken}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ external_customer_id: userId, return_url: returnUrl }),
+      });
+      if (!res.ok)
+        throw new Error(`Polar customer session failed: ${res.status} ${await res.text()}`);
+      const body = (await res.json()) as { customer_portal_url: string };
+      return { url: body.customer_portal_url };
+    },
   };
 }
 

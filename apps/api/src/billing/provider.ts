@@ -35,4 +35,6 @@ export interface BillingProvider {
     successUrl: string;
     interval: BillingInterval;
   }): Promise<{ url: string }>;
+  /** A short-lived link to the provider's hosted page for managing the subscription. */
+  createPortalSession(opts: { userId: string; returnUrl: string }): Promise<{ url: string }>;
 }

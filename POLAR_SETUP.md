@@ -12,10 +12,11 @@ the only thing the app checks for Pro access.
 | Route | Purpose |
 | --- | --- |
 | `POST /billing/checkout` `{ interval: "month" \| "year" }` | Signed-in only. Creates a Polar checkout with `external_customer_id` = our user id; returns `{ url }`. |
+| `POST /billing/portal` | Signed-in users who have ever subscribed. Creates a Polar customer session; returns `{ url }` for the hosted customer portal. |
 | `POST /billing/webhooks/polar` | Verifies the Standard Webhooks signature, logs to `billing_events` (idempotent by `webhook-id`), upserts `entitlements` from `subscription.*` events. |
 
-Polar hosts the customer portal and emails customers a link to it, so there's no app code for
-managing or cancelling a subscription.
+Polar hosts the customer portal (cancel, change card, invoices). Pro users reach it from the
+"Manage billing" link in the topbar and the home page; Polar also emails customers a link.
 
 ## Files changed
 
@@ -31,7 +32,9 @@ managing or cancelling a subscription.
 `POLAR_PRO_YEARLY_PRODUCT_ID`. Deployed stages read them from Secrets Manager
 (`fixedstep/<stage>/api`).
 
-The sandbox token has products, checkouts and webhooks scopes, but not discounts.
+Tokens need `products`, `checkouts`, `webhooks` and `customer_sessions` (write) scopes. The
+current sandbox token is missing `customer_sessions`, so "Manage billing" fails until it's
+replaced; it also lacks `discounts`, which the app doesn't use.
 
 ## Sandbox resources
 

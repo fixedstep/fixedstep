@@ -13,6 +13,16 @@ export async function hasPro(db: Db, userId: string | undefined): Promise<boolea
   return rows.length > 0;
 }
 
+/** Whether the user has ever had a subscription with this provider (so a customer exists). */
+export async function hasBillingAccount(db: Db, userId: string, provider: string) {
+  const rows = await db
+    .select({ id: entitlements.id })
+    .from(entitlements)
+    .where(and(eq(entitlements.userId, userId), eq(entitlements.provider, provider)))
+    .limit(1);
+  return rows.length > 0;
+}
+
 /**
  * Upserts the "pro" entitlement for a subscription. Providers deliver webhooks out of order,
  * so an update older than the stored one is skipped. Returns whether it was applied.

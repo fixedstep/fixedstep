@@ -54,6 +54,26 @@ describe("createCheckout", () => {
     expect(products).toEqual([["prod_year"], ["prod_month"]]);
   });
 
+  it("opens a portal session for our user id", async () => {
+    const fetch = vi.fn(async () =>
+      Response.json({ customer_portal_url: "https://polar.test/portal/1" }, { status: 201 }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    const { url } = await provider({}).createPortalSession({
+      userId: "u1",
+      returnUrl: "https://x/",
+    });
+
+    const [endpoint, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(endpoint).toBe("https://sandbox-api.polar.sh/v1/customer-sessions/");
+    expect(JSON.parse(String(init.body))).toEqual({
+      external_customer_id: "u1",
+      return_url: "https://x/",
+    });
+    expect(url).toBe("https://polar.test/portal/1");
+  });
+
   it("reports an interval without a product as unsupported", () => {
     const p = provider({ month: "prod_month", year: "" });
     expect(p.supports("month")).toBe(true);

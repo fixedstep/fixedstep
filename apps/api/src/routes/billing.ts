@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { WebhookVerificationError } from "../billing/polar";
 import { BILLING_INTERVALS, type BillingInterval } from "../billing/provider";
 import type { AppEnv, Deps } from "../context";
-import { applySubscriptionUpdate } from "../lib/entitlements";
+import { applySubscriptionUpdate, hasBillingAccount } from "../lib/entitlements";
 
 export function billingRoutes({ db, billing, env }: Deps) {
   const r = new Hono<AppEnv>();
@@ -28,6 +28,21 @@ export function billingRoutes({ db, billing, env }: Deps) {
       email: user.email,
       successUrl: `${env.WEB_ORIGIN}/?checkout=success`,
       interval,
+    });
+    return c.json({ url });
+  });
+
+  // Any past subscriber, not only current Pro: a lapsed or past-due customer needs the portal
+  // to fix their card or find invoices.
+  r.post("/billing/portal", async (c) => {
+    const user = c.get("user");
+    if (!user) return c.json({ error: "sign in first" }, 401);
+    if (!(await hasBillingAccount(db, user.id, billing.name))) {
+      return c.json({ error: "no subscription to manage" }, 404);
+    }
+    const { url } = await billing.createPortalSession({
+      userId: user.id,
+      returnUrl: `${env.WEB_ORIGIN}/`,
     });
     return c.json({ url });
   });
