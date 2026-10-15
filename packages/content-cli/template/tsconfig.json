@@ -1,0 +1,15 @@
+{
+  // Editor type-checking only; nothing here is built. types/harness.d.ts is a copy of the
+  // platform's packages/test-harness/authoring/harness.d.ts; refresh it when bumping PLATFORM_REF.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["courses/**/*.ts", "types"]
+}

@@ -201,7 +201,7 @@ importers:
         version: 3.4.9
     devDependencies:
       '@electric-sql/pglite':
-        specifier: 0.5.10
+        specifier: ^0.5.10
         version: 0.5.10
       drizzle-kit:
         specifier: ^0.31.11

@@ -2,7 +2,7 @@ name: fixedstep
 
 # Local development stack.
 #   docker compose up                      # postgres + api (:3000) + web (:5173), hot reload
-#   docker compose run --rm api pnpm content:sync
+#   docker compose run --rm api pnpm content:sync   # loads $CONTENT_DIR (default content-sample)
 #   docker compose --profile prod up api-prod   # production API image on :3001
 
 x-node: &node
@@ -17,10 +17,14 @@ x-node: &node
   working_dir: ${PWD}
   volumes:
     - .:${PWD}
-  environment:
+    # CONTENT_DIR (from .env) may live outside the repo, e.g. the private content repo checked
+    # out next to it, so it's mounted separately and the container reads it from /content.
+    - ${CONTENT_DIR:-./content-sample}:/content
+  environment: &node-env
     HOME: ${PWD}/.cache/docker-home
     # Overrides .env (Node's --env-file never overwrites variables that are already set).
     DATABASE_URL: postgres://fixedstep:fixedstep@postgres:5432/fixedstep
+    CONTENT_DIR: /content
 
 services:
   postgres:
@@ -63,7 +67,7 @@ services:
     <<: *node
     command: pnpm --filter @fixedstep/web dev --host 0.0.0.0
     environment:
-      HOME: ${PWD}/.cache/docker-home
+      <<: *node-env
       API_PROXY_TARGET: http://api:3000
     ports:
       - "5173:5173"

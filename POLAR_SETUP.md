@@ -51,7 +51,7 @@ replaced; it also lacks `discounts`, which the app doesn't use.
    `4242 4242 4242 4242` (any future expiry, any CVC). No money moves in sandbox.
 3. Without a webhook endpoint, checkout completes in Polar but Pro is **not** granted here.
    To test the full flow, expose the API (e.g. `cloudflared tunnel --url http://localhost:3000`),
-   register `<public-url>/billing/webhooks/polar` in the sandbox dashboard (format: raw, API
+   register `<public-url>/api/billing/webhooks/polar` in the sandbox dashboard (format: raw, API
    version 2026-10, events: `subscription.*`) and put its signing secret in
    `POLAR_WEBHOOK_SECRET`.
 

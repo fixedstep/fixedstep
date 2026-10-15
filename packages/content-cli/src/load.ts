@@ -35,7 +35,13 @@ async function readOptional(path: string): Promise<string | null> {
   }
 }
 
-function parseWith<T extends z.ZodType>(schema: T, data: unknown, where: string): z.infer<T> {
+function parseWith<T extends z.ZodType>(schema: T, yaml: string, where: string): z.infer<T> {
+  let data: unknown;
+  try {
+    data = parseYaml(yaml);
+  } catch (e) {
+    throw new ContentError(`${where}: invalid YAML: ${(e as Error).message.split("\n")[0]}`);
+  }
   const r = schema.safeParse(data);
   if (!r.success) {
     const issues = r.error.issues.map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`);
@@ -49,7 +55,7 @@ async function loadLesson(dir: string, dirName: string): Promise<LoadedLesson> {
   if (raw === null) throw new ContentError(`${dir}: missing ${LESSON_FILES.body}`);
   const m = FRONTMATTER.exec(raw);
   if (!m) throw new ContentError(`${dir}/${LESSON_FILES.body}: missing YAML frontmatter`);
-  const fm = parseWith(LessonFrontmatter, parseYaml(m[1] ?? ""), `${dir}/${LESSON_FILES.body}`);
+  const fm = parseWith(LessonFrontmatter, m[1] ?? "", `${dir}/${LESSON_FILES.body}`);
   if (fm.slug !== dirName) throw new ContentError(`${dir}: slug "${fm.slug}" != directory name`);
 
   const [starterCode, visibleTests, hiddenTests, solution] = await Promise.all([
@@ -91,14 +97,14 @@ export async function loadContent(root: string): Promise<LoadedCourse[]> {
     const courseDir = join(coursesDir, entry.name);
     const yaml = await readOptional(join(courseDir, "course.yaml"));
     if (yaml === null) throw new ContentError(`${courseDir}: missing course.yaml`);
-    const course = parseWith(CourseManifest, parseYaml(yaml), `${courseDir}/course.yaml`);
+    const course = parseWith(CourseManifest, yaml, `${courseDir}/course.yaml`);
 
     const chaptersLoaded: LoadedChapter[] = [];
     for (const chapterSlug of course.chapters) {
       const chapterDir = join(courseDir, chapterSlug);
       const cy = await readOptional(join(chapterDir, "chapter.yaml"));
       if (cy === null) throw new ContentError(`${chapterDir}: missing chapter.yaml`);
-      const chapter = parseWith(ChapterManifest, parseYaml(cy), `${chapterDir}/chapter.yaml`);
+      const chapter = parseWith(ChapterManifest, cy, `${chapterDir}/chapter.yaml`);
       const lessonsLoaded = [];
       for (const lessonSlug of chapter.lessons) {
         lessonsLoaded.push(await loadLesson(join(chapterDir, lessonSlug), lessonSlug));

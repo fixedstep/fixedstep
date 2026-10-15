@@ -1,8 +1,11 @@
-# Copy into the PRIVATE content repo as .github/workflows/deploy.yml.
-# It checks out the public platform repo for the content CLI, validates every lesson
-# (solutions must pass their tests in the production QuickJS grader), bundles, and uploads.
-# Upload triggers the in-VPC sync Lambda. The content repo never holds DB credentials.
-# Set AWS_ACCOUNT_ID as an *environment* variable on `staging` and `production` (one account each).
+# Validates every lesson (solutions must pass their tests in the production QuickJS grader),
+# bundles, and uploads. Upload triggers the in-VPC sync Lambda. This repo never holds DB
+# credentials. Set AWS_ACCOUNT_ID as an *environment* variable on `staging` and `production`
+# (one account each).
+#
+# PLATFORM_REF pins the platform version that validates and bundles this content, so a schema
+# change in the platform can't break publishing without warning. Bump it in a PR; the PR run
+# validates against the new version before anything ships.
 name: Publish content
 
 on:
@@ -14,6 +17,9 @@ on:
 permissions:
   id-token: write
   contents: read
+
+env:
+  PLATFORM_REF: {{PLATFORM_REF}}
 
 jobs:
   publish:
@@ -28,7 +34,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: timmendenhall/fixedstep
+          ref: ${{ env.PLATFORM_REF }}
           path: platform
+          # Only needed while the platform repo is private: a fine-grained token with
+          # read-only Contents access to it, stored as a secret in this repo.
+          # token: ${{ secrets.PLATFORM_REPO_TOKEN }}
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: platform/package.json

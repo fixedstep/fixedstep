@@ -66,6 +66,24 @@ e.g. `scripts/in-docker.sh pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm db:g
 To try the production API image (the one ECS runs) against the local database:
 `docker compose --profile prod up --build api-prod` → http://localhost:3001.
 
+### Writing course content
+
+The `content:*` scripts load `CONTENT_DIR` from `.env` (relative to this repo; default
+`content-sample`), and `docker compose` mounts that directory into the containers, so it can
+be the private content repo checked out next to this one:
+
+```sh
+pnpm --filter @fixedstep/content-cli start init ../fixedstep-content   # once: new content repo
+echo CONTENT_DIR=../fixedstep-content >> .env                          # then restart compose
+scripts/in-docker.sh pnpm content:dev                       # re-sync on every save
+scripts/in-docker.sh pnpm content:new <course>/<chapter>/<lesson> sim   # reading|quiz|code|sim
+```
+
+`init` writes the README, `.gitignore`, editor types and a publish workflow pinned to this
+repo's current commit (`PLATFORM_REF`; push that commit first). `content:dev` syncs even when
+a solution fails, so lessons can be previewed while being written; `content:validate` and CI
+don't allow that.
+
 Prefer running on the host? `pnpm install && pnpm db:up && pnpm db:migrate && pnpm content:sync && pnpm dev`
 works too. Host and containers share one `node_modules` (and a repo-local `.pnpm-store/`), so you
 can switch freely; just run `docker compose` from the repo root.
@@ -97,7 +115,7 @@ for each stage's account before launch.
 
 After that: merging to `main` deploys **staging**, and pushing a `v*` tag deploys **prod**
 (after approval). Content is published by the private content repo's own workflow (see
-`docs/content-repo-deploy.example.yml`).
+`packages/content-cli/template/_github/workflows/publish.yml`).
 
 ## License
 

@@ -9,4 +9,6 @@
   responses are built field-by-field from `@fixedstep/content-schema` DTOs.
 - XP/progress are only written after server-side grading (`apps/api/src/lib/progress.ts`).
 - Infra naming: `resourceName(stage, x)` → `fixedstep-<stage>-x`; stacks `Fixedstep-<Stage>-X`.
-- Course content is private; only `content-sample/` lives here.
+- Course content is private; only `content-sample/` lives here. `CONTENT_DIR` points the
+  `content:*` scripts (and the compose `/content` mount) at the private repo; the content repo
+  skeleton is `packages/content-cli/template/` (dotfiles stored as `_name`), used by `init`.

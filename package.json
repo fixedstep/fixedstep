@@ -17,8 +17,10 @@
     "db:up": "docker compose up -d postgres",
     "db:generate": "pnpm --filter @fixedstep/db generate",
     "db:migrate": "pnpm --filter @fixedstep/db migrate",
-    "content:validate": "pnpm --filter @fixedstep/content-cli start validate ../../content-sample",
-    "content:sync": "pnpm --filter @fixedstep/content-cli start sync ../../content-sample",
+    "content:validate": "pnpm --filter @fixedstep/content-cli start validate",
+    "content:sync": "pnpm --filter @fixedstep/content-cli start sync",
+    "content:dev": "pnpm --filter @fixedstep/content-cli start dev",
+    "content:new": "pnpm --filter @fixedstep/content-cli start new",
     "cdk": "pnpm --filter @fixedstep/infra cdk"
   },
   "devDependencies": {
