@@ -1,6 +1,6 @@
 # Fixedstep content (private)
 
-Course content for [Fixedstep](https://github.com/timmendenhall/fixedstep). The platform repo
+Course content for [Fixedstep](https://github.com/fixedstep/fixedstep). The platform repo
 holds the content CLI, the schema (`@fixedstep/content-schema`) and a small sample course
 (`content-sample/`) showing every lesson kind; this repo has the same layout.
 

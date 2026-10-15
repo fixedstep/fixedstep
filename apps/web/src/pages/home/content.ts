@@ -1,6 +1,6 @@
 /** Marketing copy for the home page, kept in one place so it's easy to edit. */
 
-export const GITHUB_URL = "https://github.com/timmendenhall/fixedstep";
+export const GITHUB_URL = "https://github.com/fixedstep/fixedstep";
 
 export const PRICING = {
   monthly: { price: 20, label: "/ month" },
