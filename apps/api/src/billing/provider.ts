@@ -12,6 +12,8 @@ export type SubscriptionUpdate = {
   subscriptionId: string;
   status: "active" | "canceled" | "past_due" | "revoked";
   currentPeriodEnd: Date | null;
+  /** When the provider last changed the subscription; orders out-of-order deliveries. */
+  modifiedAt: Date;
 };
 
 export type BillingInterval = "month" | "year";

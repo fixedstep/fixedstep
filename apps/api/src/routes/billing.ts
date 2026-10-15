@@ -1,9 +1,10 @@
-import { billingEvents, entitlements } from "@fixedstep/db";
+import { billingEvents } from "@fixedstep/db";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { WebhookVerificationError } from "../billing/polar";
 import { BILLING_INTERVALS, type BillingInterval } from "../billing/provider";
 import type { AppEnv, Deps } from "../context";
+import { applySubscriptionUpdate } from "../lib/entitlements";
 
 export function billingRoutes({ db, billing, env }: Deps) {
   const r = new Hono<AppEnv>();
@@ -54,32 +55,15 @@ export function billingRoutes({ db, billing, env }: Deps) {
       .returning({ id: billingEvents.id });
     if (inserted.length === 0) return c.json({ ok: true, duplicate: true });
 
+    let stale = false;
     if (event.type === "subscription") {
-      // NOTE: last-write-wins. If out-of-order delivery becomes a problem, compare the
-      // provider's modified_at before overwriting.
-      const values = {
-        status: event.status,
-        currentPeriodEnd: event.currentPeriodEnd,
-        userId: event.userId,
-      };
-      await db
-        .insert(entitlements)
-        .values({
-          kind: "pro",
-          provider: billing.name,
-          externalId: event.subscriptionId,
-          ...values,
-        })
-        .onConflictDoUpdate({
-          target: [entitlements.provider, entitlements.externalId],
-          set: values,
-        });
+      stale = !(await applySubscriptionUpdate(db, billing.name, event));
     }
     await db
       .update(billingEvents)
       .set({ processedAt: new Date() })
       .where(eq(billingEvents.id, event.eventId));
-    return c.json({ ok: true });
+    return c.json({ ok: true, ...(stale && { stale: true }) });
   });
 
   return r;

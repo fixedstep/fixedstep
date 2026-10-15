@@ -46,10 +46,10 @@ importers:
         version: 2.1.5(hono@4.13.13)
       better-auth:
         specifier: ^1.7.7
-        version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+        version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
       drizzle-orm:
         specifier: ^0.45.4
-        version: 0.45.4(kysely@0.29.6)(postgres@3.4.9)
+        version: 0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9)
       hono:
         specifier: ^4.13.13
         version: 4.13.13
@@ -111,7 +111,7 @@ importers:
         version: 1.170.44(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       better-auth:
         specifier: ^1.7.7
-        version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
+        version: 1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)))
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -173,7 +173,7 @@ importers:
         version: link:../test-harness
       drizzle-orm:
         specifier: ^0.45.4
-        version: 0.45.4(kysely@0.29.6)(postgres@3.4.9)
+        version: 0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9)
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
@@ -195,11 +195,14 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.4
-        version: 0.45.4(kysely@0.29.6)(postgres@3.4.9)
+        version: 0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9)
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 0.5.10
+        version: 0.5.10
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
@@ -480,6 +483,9 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@electric-sql/pglite@0.5.10':
+    resolution: {integrity: sha512-tXc/25U3ulOkiRQuTFdwIv+JhBqtMdAF7Gvo6CfZZWtSB4+hgC4Wr2vwK5ngvvN5PJfAAEGIsfyCVy1JhCOBYw==}
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
@@ -2421,12 +2427,12 @@ snapshots:
       nanostores: 1.5.5
       zod: 4.6.7
 
-  '@better-auth/drizzle-adapter@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9))':
+  '@better-auth/drizzle-adapter@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9))':
     dependencies:
       '@better-auth/core': 1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5)
       '@better-auth/utils': 0.4.2
     optionalDependencies:
-      drizzle-orm: 0.45.4(kysely@0.29.6)(postgres@3.4.9)
+      drizzle-orm: 0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9)
 
   '@better-auth/kysely-adapter@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(kysely@0.29.6)':
     dependencies:
@@ -2561,6 +2567,8 @@ snapshots:
       w3c-keyname: 2.2.8
 
   '@drizzle-team/brocli@0.10.2': {}
+
+  '@electric-sql/pglite@0.5.10': {}
 
   '@esbuild-kit/core-utils@3.3.2':
     dependencies:
@@ -3110,10 +3118,10 @@ snapshots:
 
   bail@2.0.2: {}
 
-  better-auth@1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))):
+  better-auth@1.7.7(drizzle-kit@0.31.11)(drizzle-orm@0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))):
     dependencies:
       '@better-auth/core': 1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5)
-      '@better-auth/drizzle-adapter': 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9))
+      '@better-auth/drizzle-adapter': 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9))
       '@better-auth/kysely-adapter': 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(kysely@0.29.6)
       '@better-auth/memory-adapter': 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)
       '@better-auth/mongo-adapter': 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.7))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.4.2)
@@ -3131,7 +3139,7 @@ snapshots:
       zod: 4.6.7
     optionalDependencies:
       drizzle-kit: 0.31.11
-      drizzle-orm: 0.45.4(kysely@0.29.6)(postgres@3.4.9)
+      drizzle-orm: 0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
       vitest: 5.0.4(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
@@ -3210,8 +3218,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.4(kysely@0.29.6)(postgres@3.4.9):
+  drizzle-orm@0.45.4(@electric-sql/pglite@0.5.10)(kysely@0.29.6)(postgres@3.4.9):
     optionalDependencies:
+      '@electric-sql/pglite': 0.5.10
       kysely: 0.29.6
       postgres: 3.4.9
 

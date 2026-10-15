@@ -121,6 +121,8 @@ function toBillingEvent(
     status: string;
     current_period_end?: string | null;
     cancel_at_period_end?: boolean;
+    created_at: string;
+    modified_at?: string | null;
     customer?: { external_id?: string | null };
   };
   const userId = data.customer?.external_id;
@@ -138,5 +140,7 @@ function toBillingEvent(
     subscriptionId: data.id,
     status,
     currentPeriodEnd: data.current_period_end ? new Date(data.current_period_end) : null,
+    // modified_at is null until the subscription first changes after creation.
+    modifiedAt: new Date(data.modified_at ?? data.created_at),
   };
 }
