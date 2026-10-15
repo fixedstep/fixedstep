@@ -60,3 +60,48 @@ describe("createCheckout", () => {
     expect(p.supports("year")).toBe(false);
   });
 });
+
+describe("parseWebhook", () => {
+  const p = createPolarProvider({ server: "sandbox", webhookSecret: secret, proProductIds: {} });
+  const parse = (type: string, data: Record<string, unknown>) => {
+    const payload = JSON.stringify({ type, data });
+    const ts = Math.floor(Date.now() / 1000);
+    return p.parseWebhook(payload, headersFor(payload, ts));
+  };
+  const sub = (fields: Record<string, unknown>) => ({
+    id: "sub_1",
+    status: "active",
+    current_period_end: "2026-11-01T00:00:00Z",
+    cancel_at_period_end: false,
+    customer: { external_id: "u1" },
+    ...fields,
+  });
+
+  it("maps an active subscription to our user", () => {
+    expect(parse("subscription.active", sub({}))).toMatchObject({
+      type: "subscription",
+      userId: "u1",
+      subscriptionId: "sub_1",
+      status: "active",
+      currentPeriodEnd: new Date("2026-11-01T00:00:00Z"),
+    });
+  });
+
+  it("treats cancel-at-period-end as canceled so access ends at the period end", () => {
+    expect(parse("subscription.canceled", sub({ cancel_at_period_end: true }))).toMatchObject({
+      status: "canceled",
+    });
+  });
+
+  it("revokes access while paused", () => {
+    expect(parse("subscription.paused", sub({ status: "paused" }))).toMatchObject({
+      status: "revoked",
+    });
+  });
+
+  it("ignores incomplete subscriptions, missing users and non-subscription events", () => {
+    expect(parse("subscription.created", sub({ status: "incomplete" })).type).toBe("ignored");
+    expect(parse("subscription.active", sub({ customer: {} })).type).toBe("ignored");
+    expect(parse("order.paid", {}).type).toBe("ignored");
+  });
+});

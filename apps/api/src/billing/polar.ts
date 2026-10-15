@@ -18,8 +18,8 @@ export class WebhookVerificationError extends Error {}
  * Polar products have a single recurring price, so monthly and yearly Pro are two products.
  * Both grant the same "pro" entitlement; webhooks don't care which one was bought.
  *
- * TODO(before launch): verify the checkout request body and webhook payload field names
- * against the Polar API version you pin, and test end-to-end in the Polar sandbox.
+ * Checkout body and webhook payload fields checked against Polar's 2026-10 OpenAPI spec.
+ * TODO(before launch): test end-to-end in the Polar sandbox.
  */
 export function createPolarProvider(opts: {
   server: "sandbox" | "production";
@@ -98,12 +98,15 @@ export function verifyStandardWebhook(
   if (!ok) throw new WebhookVerificationError("bad signature");
 }
 
+// incomplete/incomplete_expired never granted access, so they're ignored. A paused
+// subscription loses access until resumed (which arrives as active again).
 const STATUS: Record<string, SubscriptionUpdate["status"] | undefined> = {
   active: "active",
   trialing: "active",
   past_due: "past_due",
   unpaid: "past_due",
   canceled: "canceled",
+  paused: "revoked",
 };
 
 function toBillingEvent(
@@ -117,10 +120,14 @@ function toBillingEvent(
     id: string;
     status: string;
     current_period_end?: string | null;
+    cancel_at_period_end?: boolean;
     customer?: { external_id?: string | null };
   };
   const userId = data.customer?.external_id;
-  const status = event.type === "subscription.revoked" ? "revoked" : STATUS[data.status];
+  let status = event.type === "subscription.revoked" ? "revoked" : STATUS[data.status];
+  // A cancellation at period end stays "active" in Polar until subscription.revoked; record
+  // it as canceled so access still ends at current_period_end if that webhook never arrives.
+  if (status === "active" && data.cancel_at_period_end) status = "canceled";
   if (!userId || !status) return ignored;
 
   return {
