@@ -5,6 +5,7 @@ import type { Construct } from "constructs";
 import { resourceName, type StageConfig, secretName } from "./config";
 
 export const DB_NAME = "fixedstep";
+export const DB_PORT = 5432;
 
 export class DataStack extends Stack {
   readonly db: rds.DatabaseInstance;
@@ -24,6 +25,7 @@ export class DataStack extends Stack {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       databaseName: DB_NAME,
+      port: DB_PORT,
       credentials: rds.Credentials.fromGeneratedSecret("fixedstep_admin", {
         secretName: secretName(config.stage, "db-admin"),
       }),

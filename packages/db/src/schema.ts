@@ -244,6 +244,8 @@ export const entitlements = pgTable(
     status: entitlementStatus("status").notNull(),
     /** Access continues until this time even after cancellation. */
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    /** Provider's last-modified time for the subscription; older webhooks are skipped. */
+    providerModifiedAt: timestamp("provider_modified_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [

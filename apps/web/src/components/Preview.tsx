@@ -1,8 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
-/** Canvas preview for `sim` lessons. A new worker per run; the old one is terminated. */
-export function Preview({ code, runId }: { code: string; runId: number }) {
+/**
+ * Canvas preview for `sim` lessons and playgrounds. A new worker per run (runId change); the
+ * old one is terminated. With `live`, code changes are hot-swapped into the running worker.
+ */
+export function Preview({
+  code,
+  runId,
+  live = false,
+  autoFocus = true,
+}: {
+  code: string;
+  runId: number;
+  live?: boolean;
+  autoFocus?: boolean;
+}) {
   const wrap = useRef<HTMLDivElement>(null);
+  const worker = useRef<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: restart only when runId changes
@@ -16,28 +30,33 @@ export function Preview({ code, runId }: { code: string; runId: number }) {
     canvas.tabIndex = 0;
     wrap.current.replaceChildren(canvas);
 
-    const worker = new Worker(new URL("../workers/preview.worker.ts", import.meta.url), {
+    const w = new Worker(new URL("../workers/preview.worker.ts", import.meta.url), {
       type: "module",
     });
-    worker.onmessage = (e: MessageEvent<{ type: "error"; message: string }>) => {
-      setError(e.data.message);
-      worker.terminate();
+    worker.current = w;
+    w.onmessage = (e: MessageEvent<{ type: "error"; message: string } | { type: "ok" }>) => {
+      setError(e.data.type === "error" ? e.data.message : null);
     };
     const offscreen = canvas.transferControlToOffscreen();
-    worker.postMessage({ type: "start", code, canvas: offscreen }, [offscreen]);
+    w.postMessage({ type: "start", code, canvas: offscreen }, [offscreen]);
 
     const onKey = (down: boolean) => (e: KeyboardEvent) => {
       e.preventDefault();
-      worker.postMessage({ type: "key", key: e.key, down });
+      w.postMessage({ type: "key", key: e.key, down });
     };
-    const keydown = onKey(true);
-    const keyup = onKey(false);
-    canvas.addEventListener("keydown", keydown);
-    canvas.addEventListener("keyup", keyup);
-    canvas.focus();
+    canvas.addEventListener("keydown", onKey(true));
+    canvas.addEventListener("keyup", onKey(false));
+    if (autoFocus) canvas.focus();
 
-    return () => worker.terminate();
+    return () => {
+      w.terminate();
+      worker.current = null;
+    };
   }, [runId]);
+
+  useEffect(() => {
+    if (live) worker.current?.postMessage({ type: "reload", code });
+  }, [code, live]);
 
   return (
     <div className="preview">

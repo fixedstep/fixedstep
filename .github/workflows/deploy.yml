@@ -13,8 +13,9 @@ permissions:
 
 jobs:
   deploy:
-    # Skipped until AWS is bootstrapped and the AWS_ACCOUNT_ID repo variable is set.
-    if: vars.AWS_ACCOUNT_ID != ''
+    # Skipped until the DEPLOY_ENABLED repo variable is "true". (Environment variables such as
+    # AWS_ACCOUNT_ID, set per stage since each stage is its own account, aren't visible here.)
+    if: vars.DEPLOY_ENABLED == 'true'
     # Native arm64 runner: the API image and Lambdas are arm64 (Graviton), no QEMU needed.
     runs-on: ubuntu-24.04-arm
     environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}

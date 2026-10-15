@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet } from "@tanstack/react-router";
 import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
+import { GITHUB_URL } from "../pages/home/content";
+import { ManageBillingButton } from "./ManageBillingButton";
 
 export function Layout() {
   const qc = useQueryClient();
@@ -23,7 +25,12 @@ export function Layout() {
               <span className="stat" title="Experience">
                 ⭐ {me.data.xp} XP
               </span>
-              {me.data.pro && <span className="badge">PRO</span>}
+              {me.data.pro && (
+                <>
+                  <span className="badge">PRO</span>
+                  <ManageBillingButton />
+                </>
+              )}
               <button
                 type="button"
                 className="link-button"
@@ -43,6 +50,16 @@ export function Layout() {
       <main>
         <Outlet />
       </main>
+      <footer className="site-footer">
+        <span className="muted">© {new Date().getFullYear()} Fixedstep</span>
+        <nav>
+          <Link to="/">Courses</Link>
+          <a href="/#pricing">Pricing</a>
+          <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+        </nav>
+      </footer>
     </div>
   );
 }

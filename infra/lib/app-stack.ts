@@ -22,9 +22,11 @@ import * as targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as ses from "aws-cdk-lib/aws-ses";
 import type { Construct } from "constructs";
 import { resourceName, type StageConfig, secretName } from "./config";
 import { DB_NAME } from "./data-stack";
+import { DbAccess } from "./db-access";
 import { REPO_ROOT, repoPath } from "./paths";
 
 /** Rewrites extension-less paths to /index.html so the SPA router handles them. */
@@ -68,6 +70,25 @@ export class AppStack extends Stack {
           })
         : undefined;
 
+    // --- Email (SES) ----------------------------------------------------------------------------
+    // A domain identity on the hosted zone; CDK writes the DKIM records into it. Without a domain
+    // the API logs emails instead. New accounts start in the SES sandbox (verified recipients
+    // only): request production access per account before launch.
+    const emailIdentity = zone
+      ? new ses.EmailIdentity(this, "EmailIdentity", {
+          identity: ses.Identity.publicHostedZone(zone),
+        })
+      : undefined;
+    const emailEnv: Record<string, string> =
+      emailIdentity && config.domain
+        ? { EMAIL_PROVIDER: "ses", EMAIL_FROM: `Fixedstep <noreply@${config.domain.zoneName}>` }
+        : { EMAIL_PROVIDER: "log" };
+    if (!emailIdentity) {
+      Annotations.of(this).addWarning(
+        "no domain configured; the API will log emails, not send them",
+      );
+    }
+
     // --- Web bucket ---------------------------------------------------------------------------
     const webBucket = new s3.Bucket(this, "Web", {
       bucketName: `${resourceName(stage, "web")}-${this.account}`,
@@ -79,6 +100,8 @@ export class AppStack extends Stack {
 
     // --- API secrets ----------------------------------------------------------------------------
     // Fill in the empty values in the console after the first deploy (or with the CLI).
+    // WARNING: once deployed, don't edit this template. CloudFormation regenerates the secret
+    // when it changes, wiping every filled-in value and rotating BETTER_AUTH_SECRET.
     const appSecret = new secretsmanager.Secret(this, "ApiSecret", {
       secretName: secretName(stage, "api"),
       generateSecretString: {
@@ -87,7 +110,8 @@ export class AppStack extends Stack {
           GITHUB_CLIENT_SECRET: "",
           POLAR_ACCESS_TOKEN: "",
           POLAR_WEBHOOK_SECRET: "",
-          POLAR_PRO_PRODUCT_ID: "",
+          POLAR_PRO_MONTHLY_PRODUCT_ID: "",
+          POLAR_PRO_YEARLY_PRODUCT_ID: "",
         }),
         generateStringKey: "BETTER_AUTH_SECRET",
         passwordLength: 48,
@@ -138,6 +162,7 @@ export class AppStack extends Stack {
           GRADER_MODE: "lambda",
           GRADER_FUNCTION_NAME: grader.functionName,
           POLAR_SERVER: stage === "prod" ? "production" : "sandbox",
+          ...emailEnv,
         },
         secrets: {
           DB_HOST: ecs.Secret.fromSecretsManager(dbSecret, "host"),
@@ -151,7 +176,8 @@ export class AppStack extends Stack {
               "GITHUB_CLIENT_SECRET",
               "POLAR_ACCESS_TOKEN",
               "POLAR_WEBHOOK_SECRET",
-              "POLAR_PRO_PRODUCT_ID",
+              "POLAR_PRO_MONTHLY_PRODUCT_ID",
+              "POLAR_PRO_YEARLY_PRODUCT_ID",
             ].map((k) => [k, ecs.Secret.fromSecretsManager(appSecret, k)]),
           ),
         },
@@ -159,8 +185,9 @@ export class AppStack extends Stack {
     });
     api.targetGroup.configureHealthCheck({ path: "/health", healthyThresholdCount: 2 });
     api.targetGroup.setAttribute("deregistration_delay.timeout_seconds", "15");
-    db.connections.allowDefaultPortFrom(api.service);
+    new DbAccess(this, "DbAccess", db, api.service);
     grader.grantInvoke(api.taskDefinition.taskRole);
+    emailIdentity?.grantSendEmail(api.taskDefinition.taskRole);
 
     // --- CloudFront ---------------------------------------------------------------------------------
     const distribution = new cloudfront.Distribution(this, "Cdn", {

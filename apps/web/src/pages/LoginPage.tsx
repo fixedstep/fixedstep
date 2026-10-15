@@ -3,18 +3,47 @@ import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { authClient } from "../lib/auth-client";
 
+type Mode = "signIn" | "signUp" | "forgot";
+
+const TITLES: Record<Mode, string> = {
+  signIn: "Sign in",
+  signUp: "Create an account",
+  forgot: "Reset your password",
+};
+const SUBMIT_LABELS: Record<Mode, string> = {
+  signIn: "Sign in",
+  signUp: "Sign up",
+  forgot: "Send reset link",
+};
+
 export function LoginPage() {
-  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [mode, setMode] = useState<Mode>("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setNotice(null);
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (mode === "forgot") {
+      const res = await authClient.requestPasswordReset({
+        email,
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (res.error) setError(res.error.message ?? "Something went wrong");
+      else setNotice("If that email has an account, we've sent it a link to reset the password.");
+      return;
+    }
     const res =
       mode === "signIn"
         ? await authClient.signIn.email({ email, password })
@@ -29,13 +58,15 @@ export function LoginPage() {
 
   return (
     <div className="login">
-      <h1>{mode === "signIn" ? "Sign in" : "Create an account"}</h1>
-      <button
-        type="button"
-        onClick={() => authClient.signIn.social({ provider: "github", callbackURL: "/" })}
-      >
-        Continue with GitHub
-      </button>
+      <h1>{TITLES[mode]}</h1>
+      {mode !== "forgot" && (
+        <button
+          type="button"
+          onClick={() => authClient.signIn.social({ provider: "github", callbackURL: "/" })}
+        >
+          Continue with GitHub
+        </button>
+      )}
       <form onSubmit={onSubmit}>
         {mode === "signUp" && (
           <label>
@@ -47,27 +78,35 @@ export function LoginPage() {
           Email
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-          />
-        </label>
+        {mode !== "forgot" && (
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              required
+            />
+          </label>
+        )}
         {error && <p className="error">{error}</p>}
+        {notice && <p>{notice}</p>}
         <button type="submit" className="primary">
-          {mode === "signIn" ? "Sign in" : "Sign up"}
+          {SUBMIT_LABELS[mode]}
         </button>
       </form>
+      {mode === "signIn" && (
+        <button type="button" className="link-button" onClick={() => switchMode("forgot")}>
+          Forgot password?
+        </button>
+      )}
       <button
         type="button"
         className="link-button"
-        onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
+        onClick={() => switchMode(mode === "signUp" ? "signIn" : "signUp")}
       >
-        {mode === "signIn" ? "Need an account? Sign up" : "Have an account? Sign in"}
+        {mode === "signUp" ? "Have an account? Sign in" : "Need an account? Sign up"}
       </button>
     </div>
   );

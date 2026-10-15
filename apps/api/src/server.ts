@@ -4,6 +4,8 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { createPolarProvider } from "./billing/polar";
+import { createLogProvider } from "./email/log";
+import { createSesProvider } from "./email/ses";
 import { loadEnv } from "./env";
 import { createGrader } from "./lib/grader";
 
@@ -14,16 +16,23 @@ if (env.RUN_MIGRATIONS) {
 }
 
 const db = createDb(env.DATABASE_URL);
+const email =
+  env.EMAIL_PROVIDER === "ses"
+    ? createSesProvider({ from: env.EMAIL_FROM as string })
+    : createLogProvider();
 const app = createApp({
   env,
   db,
-  auth: createAuth(env, db),
+  auth: createAuth(env, db, email),
   grader: createGrader(env),
   billing: createPolarProvider({
     server: env.POLAR_SERVER,
     accessToken: env.POLAR_ACCESS_TOKEN,
     webhookSecret: env.POLAR_WEBHOOK_SECRET,
-    proProductId: env.POLAR_PRO_PRODUCT_ID,
+    proProductIds: {
+      month: env.POLAR_PRO_MONTHLY_PRODUCT_ID,
+      year: env.POLAR_PRO_YEARLY_PRODUCT_ID,
+    },
   }),
 });
 

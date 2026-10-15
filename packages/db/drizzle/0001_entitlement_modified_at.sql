@@ -1,0 +1,1 @@
+ALTER TABLE "entitlements" ADD COLUMN "provider_modified_at" timestamp with time zone;

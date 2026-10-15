@@ -1,9 +1,7 @@
+import { splitLessonMarkdown } from "@fixedstep/content-schema/markdown";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-
-type Segment =
-  | { type: "md"; text: string }
-  | { type: "tabs"; group: string; blocks: { lang: string; code: string }[] };
+import { Playground } from "./Playground";
 
 const LANG_LABELS: Record<string, string> = {
   ts: "TypeScript",
@@ -11,31 +9,6 @@ const LANG_LABELS: Record<string, string> = {
   csharp: "C#",
   odin: "Odin",
 };
-
-/**
- * Splits markdown so consecutive fenced blocks with the same `group=<name>` render as one
- * tabbed snippet (the "same idea in C++ / C# / Odin" convention from the content README).
- */
-export function splitSnippetGroups(md: string): Segment[] {
-  const segments: Segment[] = [];
-  const fence = /^```(\w+)[^\n]*\bgroup=([\w-]+)[^\n]*\n([\s\S]*?)^```[ \t]*$/gm;
-  let last = 0;
-  for (const m of md.matchAll(fence)) {
-    const [whole, lang = "", group = "", code = ""] = m;
-    const between = md.slice(last, m.index);
-    const prev = segments.at(-1);
-    if (prev?.type === "tabs" && prev.group === group && between.trim() === "") {
-      prev.blocks.push({ lang, code: code.trimEnd() });
-    } else {
-      if (between.trim()) segments.push({ type: "md", text: between });
-      segments.push({ type: "tabs", group, blocks: [{ lang, code: code.trimEnd() }] });
-    }
-    last = m.index + whole.length;
-  }
-  const rest = md.slice(last);
-  if (rest.trim()) segments.push({ type: "md", text: rest });
-  return segments;
-}
 
 function SnippetTabs({ blocks }: { blocks: { lang: string; code: string }[] }) {
   const [active, setActive] = useState(0);
@@ -66,15 +39,13 @@ function SnippetTabs({ blocks }: { blocks: { lang: string; code: string }[] }) {
 export function Markdown({ source }: { source: string }) {
   return (
     <div className="prose">
-      {splitSnippetGroups(source).map((s, i) =>
-        s.type === "md" ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: segments are static per render
-          <ReactMarkdown key={i}>{s.text}</ReactMarkdown>
-        ) : (
-          // biome-ignore lint/suspicious/noArrayIndexKey: segments are static per render
-          <SnippetTabs key={i} blocks={s.blocks} />
-        ),
-      )}
+      {splitLessonMarkdown(source).map((s, i) => {
+        // biome-ignore-start lint/suspicious/noArrayIndexKey: segments are static per render
+        if (s.type === "md") return <ReactMarkdown key={i}>{s.text}</ReactMarkdown>;
+        if (s.type === "tabs") return <SnippetTabs key={i} blocks={s.blocks} />;
+        return <Playground key={i} initialCode={s.code} />;
+        // biome-ignore-end lint/suspicious/noArrayIndexKey: segments are static per render
+      })}
     </div>
   );
 }

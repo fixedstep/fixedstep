@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { CodeEditor } from "../components/CodeEditor";
+import { EditorThemePicker } from "../components/EditorThemePicker";
 import { Markdown } from "../components/Markdown";
 import { Preview } from "../components/Preview";
 import { TestResults } from "../components/TestResults";
@@ -209,6 +210,7 @@ function CodeWorkspace({ lesson }: { lesson: PublicLesson }) {
         <button type="button" className="link-button" onClick={() => setShowTests((s) => !s)}>
           {showTests ? "Hide" : "View"} tests
         </button>
+        <EditorThemePicker />
       </div>
       {lesson.kind === "sim" && <Preview code={code} runId={runId} />}
       {showTests && <CodeEditor value={lesson.visibleTests ?? ""} readOnly />}

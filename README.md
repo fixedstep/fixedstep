@@ -32,6 +32,9 @@ and is delivered from the database.
   solutions, and quiz answers never leave the server. Lesson reads are rate limited.
 - **Billing** goes through Polar (merchant of record) behind a `BillingProvider` interface.
   The app only ever reads its own `entitlements` table.
+- **Email** (verification, password reset) goes behind an `EmailProvider` interface: Amazon
+  SES in AWS (a domain identity with DKIM in the stage's hosted zone), or logged to the console
+  in dev and on stages without a domain.
 
 ## Repository layout
 
@@ -63,29 +66,56 @@ e.g. `scripts/in-docker.sh pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm db:g
 To try the production API image (the one ECS runs) against the local database:
 `docker compose --profile prod up --build api-prod` → http://localhost:3001.
 
+### Writing course content
+
+The `content:*` scripts load `CONTENT_DIR` from `.env` (relative to this repo; default
+`content-sample`), and `docker compose` mounts that directory into the containers, so it can
+be the private content repo checked out next to this one:
+
+```sh
+pnpm --filter @fixedstep/content-cli start init ../fixedstep-content   # once: new content repo
+echo CONTENT_DIR=../fixedstep-content >> .env                          # then restart compose
+scripts/in-docker.sh pnpm content:dev                       # re-sync on every save
+scripts/in-docker.sh pnpm content:new <course>/<chapter>/<lesson> sim   # reading|quiz|code|sim
+```
+
+`init` writes the README, `.gitignore`, editor types and a publish workflow pinned to this
+repo's current commit (`PLATFORM_REF`; push that commit first). `content:dev` syncs even when
+a solution fails, so lessons can be previewed while being written; `content:validate` and CI
+don't allow that.
+
 Prefer running on the host? `pnpm install && pnpm db:up && pnpm db:migrate && pnpm content:sync && pnpm dev`
 works too. Host and containers share one `node_modules` (and a repo-local `.pnpm-store/`), so you
 can switch freely; just run `docker compose` from the repo root.
 
 ## Deploying
 
+Each stage is its own AWS account (in one AWS Organization), so staging can't touch prod.
 Everything is named `fixedstep-<stage>-<component>` (stacks: `Fixedstep-<Stage>-<Component>`),
 tagged `App=fixedstep` and `Stage=<stage>`. Secrets live under `fixedstep/<stage>/…`.
 
-One-time setup:
+One-time setup, per stage (`staging`, then `prod`), with that account's credentials:
 
-1. `pnpm cdk bootstrap aws://<account>/us-east-1`
-2. Set `GITHUB` repo names in `infra/lib/config.ts`, then
-   `pnpm cdk deploy Fixedstep-GithubOidc`
-3. In GitHub, create `staging` (limited to `main`) and `production` (required reviewers,
-   `v*` tags) environments, and set repository variable `AWS_ACCOUNT_ID`.
-4. First deploy, then fill in `fixedstep/<stage>/api` in Secrets Manager (Polar, GitHub
-   OAuth) and force a new ECS deployment.
-5. Once the `fixedstep.dev` Route 53 zone exists, uncomment `domain` in `infra/lib/config.ts`.
+1. Set the stage's `account` in `infra/lib/config.ts` (CDK then refuses other credentials).
+2. `pnpm cdk bootstrap aws://<account>/us-east-1`
+3. `pnpm cdk deploy -c stage=<stage> --all` (the first deploy also creates the
+   `Fixedstep-<Stage>-GithubOidc` roles CI uses from then on). Commit `infra/cdk.context.json`.
+4. Fill in `fixedstep/<stage>/api` in Secrets Manager (Polar token, webhook secret and the monthly
+   and yearly Pro product ids; GitHub OAuth) and force a new ECS deployment. Never edit that
+   secret's template in `infra/lib/app-stack.ts` after it exists: CloudFormation would regenerate
+   the secret and wipe the values.
+
+Then in GitHub: create `staging` (limited to `main`) and `production` (required reviewers,
+`v*` tags) environments, set an `AWS_ACCOUNT_ID` variable on each, and set the repository
+variable `DEPLOY_ENABLED=true`. Once the domain's Route 53 hosted zone exists (in that stage's
+account), uncomment `domain` in `infra/lib/config.ts`. The next deploy creates the SES
+identity and DKIM records and switches that stage from logging emails to sending them. New
+accounts start in the SES sandbox (verified recipients only), so request SES production access
+for each stage's account before launch.
 
 After that: merging to `main` deploys **staging**, and pushing a `v*` tag deploys **prod**
 (after approval). Content is published by the private content repo's own workflow (see
-`docs/content-repo-deploy.example.yml`).
+`packages/content-cli/template/_github/workflows/publish.yml`).
 
 ## License
 

@@ -1,5 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { BillingEvent, BillingProvider, SubscriptionUpdate } from "./provider";
+import type {
+  BillingEvent,
+  BillingInterval,
+  BillingProvider,
+  SubscriptionUpdate,
+} from "./provider";
 
 const API = { sandbox: "https://sandbox-api.polar.sh", production: "https://api.polar.sh" };
 const TOLERANCE_SECONDS = 5 * 60;
@@ -10,15 +15,20 @@ export class WebhookVerificationError extends Error {}
  * Polar via its REST API, without the SDK (the SDK's API surface is date-versioned and
  * moves quickly). Webhooks follow the Standard Webhooks spec.
  *
- * TODO(before launch): verify the checkout request body and webhook payload field names
- * against the Polar API version you pin, and test end-to-end in the Polar sandbox.
+ * Polar products have a single recurring price, so monthly and yearly Pro are two products.
+ * Both grant the same "pro" entitlement; webhooks don't care which one was bought.
+ *
+ * Checkout body and webhook payload fields checked against Polar's 2026-10 OpenAPI spec.
+ * TODO(before launch): test end-to-end in the Polar sandbox.
  */
 export function createPolarProvider(opts: {
   server: "sandbox" | "production";
   accessToken?: string;
   webhookSecret?: string;
-  proProductId?: string;
+  /** Polar product id per billing interval; an interval without one can't be bought. */
+  proProductIds: Partial<Record<BillingInterval, string>>;
 }): BillingProvider {
+  const productFor = (interval: BillingInterval) => opts.proProductIds[interval] || undefined;
   return {
     name: "polar",
 
@@ -30,8 +40,15 @@ export function createPolarProvider(opts: {
       return toBillingEvent(eventId, event);
     },
 
-    async createCheckout({ userId, email, successUrl }) {
-      if (!opts.accessToken || !opts.proProductId) throw new Error("Polar is not configured");
+    supports(interval) {
+      return Boolean(opts.accessToken && productFor(interval));
+    },
+
+    async createCheckout({ userId, email, successUrl, interval }) {
+      const productId = productFor(interval);
+      if (!opts.accessToken || !productId) {
+        throw new Error(`Polar is not configured for ${interval}ly billing`);
+      }
       const res = await fetch(`${API[opts.server]}/v1/checkouts/`, {
         method: "POST",
         headers: {
@@ -39,7 +56,7 @@ export function createPolarProvider(opts: {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          products: [opts.proProductId],
+          products: [productId],
           external_customer_id: userId,
           customer_email: email,
           success_url: successUrl,
@@ -48,6 +65,22 @@ export function createPolarProvider(opts: {
       if (!res.ok) throw new Error(`Polar checkout failed: ${res.status} ${await res.text()}`);
       const body = (await res.json()) as { url: string };
       return { url: body.url };
+    },
+
+    async createPortalSession({ userId, returnUrl }) {
+      if (!opts.accessToken) throw new Error("Polar is not configured");
+      const res = await fetch(`${API[opts.server]}/v1/customer-sessions/`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${opts.accessToken}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ external_customer_id: userId, return_url: returnUrl }),
+      });
+      if (!res.ok)
+        throw new Error(`Polar customer session failed: ${res.status} ${await res.text()}`);
+      const body = (await res.json()) as { customer_portal_url: string };
+      return { url: body.customer_portal_url };
     },
   };
 }
@@ -81,12 +114,15 @@ export function verifyStandardWebhook(
   if (!ok) throw new WebhookVerificationError("bad signature");
 }
 
+// incomplete/incomplete_expired never granted access, so they're ignored. A paused
+// subscription loses access until resumed (which arrives as active again).
 const STATUS: Record<string, SubscriptionUpdate["status"] | undefined> = {
   active: "active",
   trialing: "active",
   past_due: "past_due",
   unpaid: "past_due",
   canceled: "canceled",
+  paused: "revoked",
 };
 
 function toBillingEvent(
@@ -100,10 +136,16 @@ function toBillingEvent(
     id: string;
     status: string;
     current_period_end?: string | null;
+    cancel_at_period_end?: boolean;
+    created_at: string;
+    modified_at?: string | null;
     customer?: { external_id?: string | null };
   };
   const userId = data.customer?.external_id;
-  const status = event.type === "subscription.revoked" ? "revoked" : STATUS[data.status];
+  let status = event.type === "subscription.revoked" ? "revoked" : STATUS[data.status];
+  // A cancellation at period end stays "active" in Polar until subscription.revoked; record
+  // it as canceled so access still ends at current_period_end if that webhook never arrives.
+  if (status === "active" && data.cancel_at_period_end) status = "canceled";
   if (!userId || !status) return ignored;
 
   return {
@@ -114,5 +156,7 @@ function toBillingEvent(
     subscriptionId: data.id,
     status,
     currentPeriodEnd: data.current_period_end ? new Date(data.current_period_end) : null,
+    // modified_at is null until the subscription first changes after creation.
+    modifiedAt: new Date(data.modified_at ?? data.created_at),
   };
 }

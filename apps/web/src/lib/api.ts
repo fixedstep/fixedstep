@@ -50,5 +50,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  checkout: () => request<{ url: string }>("/billing/checkout", { method: "POST" }),
+  checkout: (interval: "month" | "year" = "month") =>
+    request<{ url: string }>("/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify({ interval }),
+    }),
+  portal: () => request<{ url: string }>("/billing/portal", { method: "POST" }),
 };

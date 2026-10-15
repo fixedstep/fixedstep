@@ -19,3 +19,16 @@ courses/<course>/<chapter>/<lesson>/
 
 Parallel snippets in other languages: consecutive fenced blocks that share a `group` are
 rendered as tabs, e.g. ` ```cpp group=loop ` followed by ` ```csharp group=loop `.
+
+Interactive playgrounds: a ` ```ts playground ` block renders as a live editor + canvas
+(320 × 240). The code exports `init / update / render` like a sim lesson. It isn't graded or
+saved. Top-level numeric constants with a `@range` comment get a slider that rewrites the
+literal in place:
+
+```ts
+const GRAVITY = 900; // @range 0..2000 step 10
+```
+
+Edits are hot-swapped without resetting the game, unless the new `init()` returns a
+different state (then it restarts). `validate` checks that every playground compiles and that
+`init`/`update` run.

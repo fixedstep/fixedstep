@@ -12,7 +12,12 @@ export type SubscriptionUpdate = {
   subscriptionId: string;
   status: "active" | "canceled" | "past_due" | "revoked";
   currentPeriodEnd: Date | null;
+  /** When the provider last changed the subscription; orders out-of-order deliveries. */
+  modifiedAt: Date;
 };
+
+export type BillingInterval = "month" | "year";
+export const BILLING_INTERVALS: readonly BillingInterval[] = ["month", "year"];
 
 export type BillingEvent =
   | SubscriptionUpdate
@@ -22,9 +27,14 @@ export interface BillingProvider {
   readonly name: string;
   /** Verifies the signature and parses the event. Throws on an invalid signature. */
   parseWebhook(rawBody: string, headers: Headers): BillingEvent;
+  /** Whether a Pro plan is configured for this billing interval. */
+  supports(interval: BillingInterval): boolean;
   createCheckout(opts: {
     userId: string;
     email: string;
     successUrl: string;
+    interval: BillingInterval;
   }): Promise<{ url: string }>;
+  /** A short-lived link to the provider's hosted page for managing the subscription. */
+  createPortalSession(opts: { userId: string; returnUrl: string }): Promise<{ url: string }>;
 }

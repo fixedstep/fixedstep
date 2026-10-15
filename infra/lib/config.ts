@@ -2,16 +2,22 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 export const APP = "fixedstep";
 export const REGION = "us-east-1";
-/** GitHub repos allowed to deploy via OIDC. TODO: set to your real org/repo names. */
+/** GitHub repos allowed to deploy via OIDC. */
 export const GITHUB = {
-  platformRepo: "fixedstep/fixedstep",
-  contentRepo: "fixedstep/content",
+  platformRepo: "timmendenhall/fixedstep",
+  /** Private content repo (create it before publishing real content). */
+  contentRepo: "timmendenhall/fixedstep-content",
 };
 
 export type Stage = "staging" | "prod";
 
 export interface StageConfig {
   stage: Stage;
+  /**
+   * AWS account this stage deploys to (one account per stage). Set it once the account exists;
+   * until then the account comes from the current credentials.
+   */
+  account?: string;
   /**
    * Custom domain. Leave undefined until the Route 53 hosted zone exists; the site is then
    * served from the CloudFront default *.cloudfront.net domain.
@@ -32,7 +38,8 @@ export interface StageConfig {
 export const STAGES: Record<Stage, StageConfig> = {
   staging: {
     stage: "staging",
-    // domain: { zoneName: "fixedstep.dev", name: "staging.fixedstep.dev" },
+    // account: "<staging account id>",
+    // domain: { zoneName: "fixedstep.com", name: "staging.fixedstep.com" },
     vpc: { maxAzs: 2, natInstanceType: new ec2.InstanceType("t4g.nano") },
     db: {
       instanceType: new ec2.InstanceType("t4g.micro"),
@@ -45,7 +52,8 @@ export const STAGES: Record<Stage, StageConfig> = {
   },
   prod: {
     stage: "prod",
-    // domain: { zoneName: "fixedstep.dev", name: "fixedstep.dev" },
+    // account: "<prod account id>",
+    // domain: { zoneName: "fixedstep.com", name: "fixedstep.com" },
     vpc: { maxAzs: 2, natInstanceType: new ec2.InstanceType("t4g.micro") },
     db: {
       instanceType: new ec2.InstanceType("t4g.small"),

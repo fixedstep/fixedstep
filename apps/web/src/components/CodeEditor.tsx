@@ -1,15 +1,18 @@
 import { javascript } from "@codemirror/lang-javascript";
 import { basicSetup, EditorView } from "codemirror";
 import { useEffect, useRef } from "react";
+import { editorTheme } from "../lib/editor-theme";
 
 export function CodeEditor({
   value,
   onChange,
   readOnly = false,
+  className,
 }: {
   value: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
+  className?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -24,6 +27,7 @@ export function CodeEditor({
       doc: value,
       extensions: [
         basicSetup,
+        editorTheme,
         javascript({ typescript: true }),
         EditorView.editable.of(!readOnly),
         EditorView.updateListener.of((u) => {
@@ -42,5 +46,5 @@ export function CodeEditor({
     }
   }, [value]);
 
-  return <div className="editor" ref={host} />;
+  return <div className={className ? `editor ${className}` : "editor"} ref={host} />;
 }
