@@ -4,9 +4,9 @@ export const APP = "fixedstep";
 export const REGION = "us-east-1";
 /** GitHub repos allowed to deploy via OIDC. */
 export const GITHUB = {
-  platformRepo: "timmendenhall/fixedstep",
+  platformRepo: "fixedstep/fixedstep",
   /** Private content repo (create it before publishing real content). */
-  contentRepo: "timmendenhall/fixedstep-content",
+  contentRepo: "fixedstep/fixedstep-content",
 };
 
 export type Stage = "staging" | "prod";

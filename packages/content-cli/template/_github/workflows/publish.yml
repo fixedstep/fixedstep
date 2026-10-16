@@ -33,7 +33,7 @@ jobs:
           path: content
       - uses: actions/checkout@v4
         with:
-          repository: timmendenhall/fixedstep
+          repository: fixedstep/fixedstep
           ref: ${{ env.PLATFORM_REF }}
           path: platform
           # Only needed while the platform repo is private: a fine-grained token with
