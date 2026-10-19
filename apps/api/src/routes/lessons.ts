@@ -2,6 +2,7 @@ import {
   type GradeResult,
   type LockedLesson,
   type PublicLesson,
+  type QuizFeedback,
   SubmitRequest,
   type SubmitResponse,
 } from "@fixedstep/content-schema";
@@ -11,7 +12,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { type AppEnv, clientKey, type Deps } from "../context";
 import { hasPro } from "../lib/entitlements";
-import { completeLesson } from "../lib/progress";
+import { completeLesson, getStats } from "../lib/progress";
+import { gradeQuiz } from "../lib/quiz";
 import { createRateLimiter } from "../lib/rate-limit";
 
 const LessonId = z.uuid();
@@ -98,6 +100,7 @@ export function lessonRoutes({ db, grader }: Deps) {
     let grade: GradeResult;
     let code: string | null = null;
     let answers: Record<string, number> | null = null;
+    let quiz: QuizFeedback[] | undefined;
 
     if (lesson.kind === "reading") {
       grade = { status: "passed", results: [], durationMs: 0 };
@@ -105,17 +108,7 @@ export function lessonRoutes({ db, grader }: Deps) {
       if (!parsed.success || !("answers" in parsed.data))
         return c.json({ error: "answers required" }, 400);
       answers = parsed.data.answers;
-      const results = (lesson.quiz ?? []).map((q) => {
-        const passed = answers?.[q.id] === q.answer;
-        return passed
-          ? { name: q.id, passed, hidden: false, error: q.explanation }
-          : { name: q.id, passed, hidden: false, error: "not quite — try again" };
-      });
-      grade = {
-        status: results.every((r) => r.passed) ? "passed" : "failed",
-        results,
-        durationMs: 0,
-      };
+      ({ grade, feedback: quiz } = gradeQuiz(lesson.quiz ?? [], answers));
     } else {
       if (!parsed.success || !("code" in parsed.data))
         return c.json({ error: "code required" }, 400);
@@ -140,7 +133,8 @@ export function lessonRoutes({ db, grader }: Deps) {
 
     const passed = grade.status === "passed";
     const xpAwarded = passed ? await completeLesson(db, user.id, lesson) : 0;
-    return c.json({ grade, xpAwarded, completed: passed } satisfies SubmitResponse);
+    const streak = passed ? (await getStats(db, user.id)).streak : undefined;
+    return c.json({ grade, xpAwarded, completed: passed, streak, quiz } satisfies SubmitResponse);
   });
 
   return r;

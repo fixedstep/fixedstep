@@ -1,13 +1,14 @@
-import type { GradeResult, PublicLesson } from "@fixedstep/content-schema";
+import type { GradeResult, PublicLesson, SubmitRequest } from "@fixedstep/content-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CodeEditor } from "../components/CodeEditor";
+import { CompletionCard } from "../components/CompletionCard";
 import { EditorThemePicker } from "../components/EditorThemePicker";
 import { Markdown } from "../components/Markdown";
 import { Preview } from "../components/Preview";
-import { TestResults } from "../components/TestResults";
-import { ApiError, api } from "../lib/api";
+import { ResultsPanel } from "../components/ResultsPanel";
+import { ApiError, api, type Me } from "../lib/api";
 import { runTestsInWorker } from "../lib/run-in-worker";
 
 export function LessonPage() {
@@ -50,7 +51,11 @@ function Paywall({ title }: { title: string }) {
 function useSubmit(lessonId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof api.submit>[1]) => api.submit(lessonId, body),
+    mutationFn: async (body: SubmitRequest | Record<string, never>) => {
+      // Captured before the submit so the completion card can show a streak bump.
+      const prevStreak = qc.getQueryData<Me>(["me"])?.streak;
+      return { ...(await api.submit(lessonId, body)), prevStreak };
+    },
     onSuccess: (res) => {
       if (res.completed) {
         void qc.invalidateQueries({ queryKey: ["me"] });
@@ -61,7 +66,14 @@ function useSubmit(lessonId: string) {
   });
 }
 
-function SubmitFeedback({ submit }: { submit: ReturnType<typeof useSubmit> }) {
+/** Sign-in prompt, error, or the completion card. Grade details are rendered by the caller. */
+function SubmitStatus({
+  submit,
+  lessonId,
+}: {
+  submit: ReturnType<typeof useSubmit>;
+  lessonId: string;
+}) {
   if (submit.error instanceof ApiError && submit.error.status === 401) {
     return (
       <p>
@@ -70,12 +82,14 @@ function SubmitFeedback({ submit }: { submit: ReturnType<typeof useSubmit> }) {
     );
   }
   if (submit.isError) return <p className="error">Submission failed. Try again.</p>;
-  if (!submit.data) return null;
+  if (!submit.data?.completed) return null;
   return (
-    <>
-      <TestResults title="Server check" result={submit.data.grade} />
-      {submit.data.xpAwarded > 0 && <p className="xp-toast">+{submit.data.xpAwarded} XP</p>}
-    </>
+    <CompletionCard
+      lessonId={lessonId}
+      xpAwarded={submit.data.xpAwarded}
+      streak={submit.data.streak}
+      prevStreak={submit.data.prevStreak}
+    />
   );
 }
 
@@ -98,16 +112,20 @@ function Lesson({ lesson }: { lesson: PublicLesson }) {
 function ReadingFooter({ lesson }: { lesson: PublicLesson }) {
   const submit = useSubmit(lesson.id);
   return (
-    <div className="actions">
-      <button
-        type="button"
-        className="primary"
-        onClick={() => submit.mutate({})}
-        disabled={submit.isPending}
-      >
-        Mark complete
-      </button>
-      <SubmitFeedback submit={submit} />
+    <div className="lesson-footer">
+      {!submit.data?.completed && (
+        <div className="actions">
+          <button
+            type="button"
+            className="primary"
+            onClick={() => submit.mutate({})}
+            disabled={submit.isPending}
+          >
+            {submit.isPending ? "Saving…" : "Mark complete"}
+          </button>
+        </div>
+      )}
+      <SubmitStatus submit={submit} lessonId={lesson.id} />
     </div>
   );
 }
@@ -115,34 +133,74 @@ function ReadingFooter({ lesson }: { lesson: PublicLesson }) {
 function Quiz({ lesson }: { lesson: PublicLesson }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const submit = useSubmit(lesson.id);
+  const questions = lesson.quiz ?? [];
+  const passed = Boolean(submit.data?.completed);
+  const submitted =
+    submit.variables && "answers" in submit.variables ? submit.variables.answers : {};
+  const unanswered = questions.filter((q) => answers[q.id] === undefined).length;
+
   return (
     <form
       className="quiz"
       onSubmit={(e) => {
         e.preventDefault();
-        submit.mutate({ answers });
+        if (unanswered === 0) submit.mutate({ answers });
       }}
     >
-      {lesson.quiz?.map((q) => (
-        <fieldset key={q.id}>
-          <legend>{q.prompt}</legend>
-          {q.options.map((opt, i) => (
-            <label key={opt}>
-              <input
-                type="radio"
-                name={q.id}
-                checked={answers[q.id] === i}
-                onChange={() => setAnswers((a) => ({ ...a, [q.id]: i }))}
-              />{" "}
-              {opt}
-            </label>
-          ))}
-        </fieldset>
-      ))}
-      <button type="submit" className="primary" disabled={submit.isPending}>
-        Submit answers
-      </button>
-      <SubmitFeedback submit={submit} />
+      {questions.map((q) => {
+        // Feedback only applies while the pick is unchanged since the last submit.
+        const fb =
+          answers[q.id] === submitted[q.id]
+            ? submit.data?.quiz?.find((f) => f.id === q.id)
+            : undefined;
+        return (
+          <fieldset
+            key={q.id}
+            className={fb ? (fb.correct ? "correct" : "incorrect") : undefined}
+            disabled={passed}
+          >
+            <legend>{q.prompt}</legend>
+            {q.options.map((opt, i) => {
+              const picked = answers[q.id] === i;
+              return (
+                <label key={opt} className={picked && fb ? "picked" : undefined}>
+                  <input
+                    type="radio"
+                    name={q.id}
+                    checked={picked}
+                    onChange={() => setAnswers((a) => ({ ...a, [q.id]: i }))}
+                  />{" "}
+                  {opt}
+                  {picked && fb && (
+                    <span className={`mark ${fb.correct ? "ok" : "bad"}`}>
+                      <span aria-hidden>{fb.correct ? " ✓" : " ✗"}</span>
+                      <span className="sr-only">{fb.correct ? "correct" : "incorrect"}</span>
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+            {fb && (
+              <p className="quiz-feedback">
+                {fb.correct ? (fb.explanation ?? "Correct.") : "Not quite. Try another option."}
+              </p>
+            )}
+          </fieldset>
+        );
+      })}
+      {!passed && (
+        <div className="actions">
+          <button type="submit" className="primary" disabled={submit.isPending || unanswered > 0}>
+            {submit.isPending ? "Checking…" : "Submit answers"}
+          </button>
+          {unanswered > 0 && (
+            <span className="muted">
+              {unanswered} question{unanswered === 1 ? "" : "s"} left
+            </span>
+          )}
+        </div>
+      )}
+      <SubmitStatus submit={submit} lessonId={lesson.id} />
     </form>
   );
 }
@@ -155,28 +213,71 @@ function loadDraft(id: string): string | null {
     return null;
   }
 }
+// Storage can be unavailable (private mode); drafts are a convenience only.
 function saveDraft(id: string, code: string) {
   try {
     localStorage.setItem(draftKey(id), code);
-  } catch {
-    // storage unavailable (private mode); drafts are a convenience only
-  }
+  } catch {}
 }
+function clearDraft(id: string) {
+  try {
+    localStorage.removeItem(draftKey(id));
+  } catch {}
+}
+
+const MOD_KEY =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl";
 
 function CodeWorkspace({ lesson }: { lesson: PublicLesson }) {
   const starter = lesson.starterCode ?? "";
   const [code, setCode] = useState(() => loadDraft(lesson.id) ?? starter);
-  const [local, setLocal] = useState<GradeResult | null>(null);
+  const [local, setLocal] = useState<{ result: GradeResult; code: string } | null>(null);
   const [running, setRunning] = useState(false);
   const [runId, setRunId] = useState(0);
   const [showTests, setShowTests] = useState(false);
   const submit = useSubmit(lesson.id);
+  const submittedCode =
+    submit.variables && "code" in submit.variables ? submit.variables.code : null;
 
   const runTests = async () => {
+    if (running) return;
     setRunning(true);
-    setLocal(await runTestsInWorker({ code, visibleTests: lesson.visibleTests ?? "" }));
-    setRunning(false);
+    const ran = code;
+    try {
+      setLocal({
+        result: await runTestsInWorker({ code: ran, visibleTests: lesson.visibleTests ?? "" }),
+        code: ran,
+      });
+    } finally {
+      setRunning(false);
+    }
   };
+  const submitCode = () => {
+    if (!submit.isPending) submit.mutate({ code });
+  };
+  const reset = () => {
+    if (code !== starter && !window.confirm("Discard your changes and restore the starter code?"))
+      return;
+    setCode(starter);
+    clearDraft(lesson.id);
+    setLocal(null);
+    submit.reset();
+  };
+
+  // Capture phase so these win over the editor's own Mod-Enter binding.
+  const shortcuts = useRef({ runTests, submitCode });
+  shortcuts.current = { runTests, submitCode };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.shiftKey) shortcuts.current.submitCode();
+      else void shortcuts.current.runTests();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, []);
 
   return (
     <div className="workspace">
@@ -193,29 +294,49 @@ function CodeWorkspace({ lesson }: { lesson: PublicLesson }) {
             ▶ Run
           </button>
         )}
-        <button type="button" onClick={runTests} disabled={running}>
-          Run tests
+        <button
+          type="button"
+          onClick={runTests}
+          disabled={running}
+          title={`Run the visible tests (${MOD_KEY}+Enter)`}
+        >
+          {running ? "Running…" : "Run tests"} <kbd>{MOD_KEY}↵</kbd>
         </button>
         <button
           type="button"
           className="primary"
-          onClick={() => submit.mutate({ code })}
+          onClick={submitCode}
           disabled={submit.isPending}
+          title={`Submit for grading (${MOD_KEY}+Shift+Enter)`}
         >
-          Submit{lesson.hasHiddenTests ? " (+ hidden tests)" : ""}
+          {submit.isPending
+            ? "Submitting…"
+            : `Submit${lesson.hasHiddenTests ? " (+ hidden tests)" : ""}`}{" "}
+          <kbd>{MOD_KEY}⇧↵</kbd>
         </button>
-        <button type="button" className="link-button" onClick={() => setCode(starter)}>
+        <button type="button" className="link-button" onClick={reset}>
           Reset
-        </button>
-        <button type="button" className="link-button" onClick={() => setShowTests((s) => !s)}>
-          {showTests ? "Hide" : "View"} tests
         </button>
         <EditorThemePicker />
       </div>
       {lesson.kind === "sim" && <Preview code={code} runId={runId} />}
-      {showTests && <CodeEditor value={lesson.visibleTests ?? ""} readOnly />}
-      {local && <TestResults title="Local tests" result={local} />}
-      <SubmitFeedback submit={submit} />
+      <ResultsPanel
+        local={local && { result: local.result, stale: local.code !== code }}
+        server={
+          submit.data && submittedCode !== null
+            ? { result: submit.data.grade, stale: submittedCode !== code }
+            : null
+        }
+      />
+      <SubmitStatus submit={submit} lessonId={lesson.id} />
+      <details
+        className="visible-tests"
+        open={showTests}
+        onToggle={(e) => setShowTests(e.currentTarget.open)}
+      >
+        <summary>Visible tests</summary>
+        {showTests && <CodeEditor value={lesson.visibleTests ?? ""} readOnly />}
+      </details>
     </div>
   );
 }

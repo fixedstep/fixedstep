@@ -14,6 +14,7 @@ type Palette = {
   bg: string;
   fg: string;
   gutterFg: string;
+  /** Must be translucent: the active line is painted over CodeMirror's selection layer. */
   activeLine: string;
   selection: string;
   cursor: string;
@@ -35,7 +36,7 @@ const PALETTES = {
     bg: "#ffffff",
     fg: "#14172b",
     gutterFg: "#a0a5c0",
-    activeLine: "#f4f5fa",
+    activeLine: "#5d628012",
     selection: "#ffe5ad",
     cursor: "#d9930d",
     match: "#d9930d55",
@@ -54,7 +55,7 @@ const PALETTES = {
     bg: "#0f1528",
     fg: "#e8eaf6",
     gutterFg: "#4d5580",
-    activeLine: "#151d38",
+    activeLine: "#9aa0c312",
     selection: "#2d3b6e",
     cursor: "#ffd166",
     match: "#ffd16655",
@@ -73,7 +74,7 @@ const PALETTES = {
     bg: "#000000",
     fg: "#ffffff",
     gutterFg: "#8a8a8a",
-    activeLine: "#1a1a1a",
+    activeLine: "#ffffff1a",
     selection: "#264f78",
     cursor: "#ffd166",
     match: "#ffd16677",

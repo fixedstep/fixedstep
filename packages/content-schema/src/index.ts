@@ -158,9 +158,22 @@ export const GradeResult = z.object({
 });
 export type GradeResult = z.infer<typeof GradeResult>;
 
+/** Per-question quiz feedback. The correct option is never sent, only whether the pick was right. */
+export const QuizFeedback = z.object({
+  id: Slug,
+  correct: z.boolean(),
+  /** Only for correct picks, since an explanation can give the answer away. */
+  explanation: z.string().optional(),
+});
+export type QuizFeedback = z.infer<typeof QuizFeedback>;
+
 export const SubmitResponse = z.object({
   grade: GradeResult,
   xpAwarded: z.number().int(),
   completed: z.boolean(),
+  /** Day streak after this submission; only set when it passed. */
+  streak: z.number().int().optional(),
+  /** Set for quiz lessons. */
+  quiz: z.array(QuizFeedback).optional(),
 });
 export type SubmitResponse = z.infer<typeof SubmitResponse>;
