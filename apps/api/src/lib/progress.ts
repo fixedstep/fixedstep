@@ -1,5 +1,6 @@
-import { type Db, lessonProgress, xpEvents } from "@fixedstep/db";
+import { type Db, lessonProgress, type schema, xpEvents } from "@fixedstep/db";
 import { desc, eq, sql } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 /**
  * Marks a lesson complete and awards XP exactly once (idempotent via unique indexes).
@@ -21,7 +22,7 @@ export async function completeLesson(
   });
 }
 
-export async function getStats(db: Db, userId: string) {
+export async function getStats(db: PgDatabase<PgQueryResultHKT, typeof schema>, userId: string) {
   const [total] = await db
     .select({ xp: sql<number>`coalesce(sum(${xpEvents.amount}), 0)::int` })
     .from(xpEvents)

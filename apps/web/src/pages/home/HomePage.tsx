@@ -1,12 +1,12 @@
 import type { CourseOutline } from "@fixedstep/content-schema";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ManageBillingButton } from "../../components/ManageBillingButton";
 import { Playground } from "../../components/Playground";
 import { CourseListSkeleton } from "../../components/Skeleton";
-import { ApiError, api, type Me } from "../../lib/api";
-import { authClient } from "../../lib/auth-client";
+import { BillingToggle, UpgradeErrors, useUpgrade } from "../../components/Upgrade";
+import { api, type Me } from "../../lib/api";
 import { allLessons, CourseCatalog, courseProgress } from "./CourseCatalog";
 import { FAQ, GITHUB_URL, PRICING, ROADMAP, STEPS } from "./content";
 import heroDemo from "./hero-demo.ts?raw";
@@ -136,7 +136,9 @@ function ContinuePanel({ me, courses }: { me: Me; courses: CourseOutline[] }) {
   return (
     <section className="continue">
       <div>
-        <p className="eyebrow">Welcome back{me.user ? `, ${me.user.name}` : ""}</p>
+        <p className="eyebrow">
+          Welcome back{me.user && !me.user.isAnonymous ? `, ${me.user.name}` : ""}
+        </p>
         {next && course ? (
           <>
             <h1>Pick up where you left off</h1>
@@ -202,14 +204,7 @@ function HowItWorks() {
 function Pricing() {
   const [yearly, setYearly] = useState(true);
   const plan = yearly ? PRICING.yearly : PRICING.monthly;
-  const checkout = useMutation({
-    mutationFn: api.checkout,
-    onSuccess: ({ url }) => window.location.assign(url),
-  });
-  const needsLogin = checkout.error instanceof ApiError && checkout.error.status === 401;
-  const needsVerify =
-    checkout.error instanceof ApiError &&
-    (checkout.error.body as { code?: string } | null)?.code === "email_unverified";
+  const { start, checkout, needsAccount } = useUpgrade();
 
   return (
     <section id="pricing" className="home-section">
@@ -218,24 +213,7 @@ function Pricing() {
         title="Start free. Go Pro when you're hooked."
         lead="The free lessons are free for good, no card needed."
       />
-      <fieldset className="billing-toggle" aria-label="Billing period">
-        <button
-          type="button"
-          aria-pressed={!yearly}
-          className={!yearly ? "active" : undefined}
-          onClick={() => setYearly(false)}
-        >
-          Monthly
-        </button>
-        <button
-          type="button"
-          aria-pressed={yearly}
-          className={yearly ? "active" : undefined}
-          onClick={() => setYearly(true)}
-        >
-          Yearly <span className="save">{PRICING.yearly.note}</span>
-        </button>
-      </fieldset>
+      <BillingToggle yearly={yearly} onChange={setYearly} />
       <div className="plans">
         <div className="plan">
           <h3>Free</h3>
@@ -266,57 +244,19 @@ function Pricing() {
           <button
             type="button"
             className="primary"
-            onClick={() => checkout.mutate(yearly ? "year" : "month")}
+            onClick={() => start(yearly ? "year" : "month")}
             disabled={checkout.isPending}
           >
-            Upgrade to Pro
+            {checkout.isPending
+              ? "Opening checkout…"
+              : needsAccount
+                ? "Create an account to upgrade"
+                : "Upgrade to Pro"}
           </button>
-          {needsLogin && (
-            <p className="muted">
-              <Link to="/login">Sign in</Link> first, then upgrade.
-            </p>
-          )}
-          {needsVerify && <VerifyEmailPrompt />}
-          {checkout.isError && !needsLogin && !needsVerify && (
-            <p className="error">
-              {checkout.error instanceof ApiError && checkout.error.status === 409
-                ? `${yearly ? "Yearly" : "Monthly"} billing isn't available yet.`
-                : "Couldn't start checkout. Try again."}
-            </p>
-          )}
+          <UpgradeErrors checkout={checkout} />
         </div>
       </div>
     </section>
-  );
-}
-
-function VerifyEmailPrompt() {
-  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
-  const email = me.data?.user?.email;
-  const resend = useMutation({
-    mutationFn: async () => {
-      if (!email) throw new Error("not signed in");
-      const res = await authClient.sendVerificationEmail({ email, callbackURL: "/#pricing" });
-      if (res.error) throw new Error(res.error.message);
-    },
-  });
-
-  return (
-    <p className="muted">
-      Verify your email before upgrading. Check {email ?? "your inbox"} for the link
-      {resend.isSuccess ? " (sent again)." : ", or "}
-      {!resend.isSuccess && (
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => resend.mutate()}
-          disabled={resend.isPending}
-        >
-          send it again
-        </button>
-      )}
-      {resend.isError && <span className="error"> Couldn't send it. Try again.</span>}
-    </p>
   );
 }
 

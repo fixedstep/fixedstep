@@ -1,9 +1,13 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
 
 type Mode = "signIn" | "signUp" | "forgot";
+
+/** `redirect`: a same-origin path to return to (validated in the router). */
+export type LoginSearch = { mode?: "signUp"; redirect?: string };
 
 const TITLES: Record<Mode, string> = {
   signIn: "Sign in",
@@ -17,13 +21,16 @@ const SUBMIT_LABELS: Record<Mode, string> = {
 };
 
 export function LoginPage() {
-  const [mode, setMode] = useState<Mode>("signIn");
+  const search = useSearch({ from: "/login" });
+  const redirect = search.redirect ?? "/";
+  const [mode, setMode] = useState<Mode>(search.mode ?? "signIn");
+  const guest = useQuery({ queryKey: ["me"], queryFn: api.me }).data?.user?.isAnonymous;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const router = useRouter();
   const qc = useQueryClient();
 
   const switchMode = (next: Mode) => {
@@ -47,22 +54,28 @@ export function LoginPage() {
     const res =
       mode === "signIn"
         ? await authClient.signIn.email({ email, password })
-        : await authClient.signUp.email({ email, password, name });
+        : await authClient.signUp.email({ email, password, name, callbackURL: redirect });
     if (res.error) {
       setError(res.error.message ?? "Something went wrong");
       return;
     }
     await qc.invalidateQueries();
-    await navigate({ to: "/" });
+    router.history.push(redirect);
   };
 
   return (
     <div className="login">
-      <h1>{TITLES[mode]}</h1>
+      <h1>{guest && mode === "signUp" ? "Save your progress" : TITLES[mode]}</h1>
+      {guest && mode !== "forgot" && (
+        <p className="muted">
+          Your guest XP, streak and completed lessons move to the account you{" "}
+          {mode === "signUp" ? "create" : "sign in to"}.
+        </p>
+      )}
       {mode !== "forgot" && (
         <button
           type="button"
-          onClick={() => authClient.signIn.social({ provider: "github", callbackURL: "/" })}
+          onClick={() => authClient.signIn.social({ provider: "github", callbackURL: redirect })}
         >
           Continue with GitHub
         </button>

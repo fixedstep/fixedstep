@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
 import { GITHUB_URL } from "../pages/home/content";
@@ -8,6 +8,7 @@ import { ManageBillingButton } from "./ManageBillingButton";
 export function Layout() {
   const qc = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const href = useLocation({ select: (l) => l.href });
 
   return (
     <div className="app">
@@ -31,16 +32,27 @@ export function Layout() {
                   <ManageBillingButton />
                 </>
               )}
-              <button
-                type="button"
-                className="link-button"
-                onClick={async () => {
-                  await authClient.signOut();
-                  await qc.invalidateQueries();
-                }}
-              >
-                Sign out
-              </button>
+              {me.data.user.isAnonymous ? (
+                // No sign-out for guests: it would orphan their progress.
+                <Link
+                  to="/login"
+                  search={{ mode: "signUp", redirect: href }}
+                  className="button primary small"
+                >
+                  Save progress
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={async () => {
+                    await authClient.signOut();
+                    await qc.invalidateQueries();
+                  }}
+                >
+                  Sign out
+                </button>
+              )}
             </>
           ) : (
             <Link to="/login">Sign in</Link>

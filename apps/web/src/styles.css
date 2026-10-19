@@ -1181,3 +1181,24 @@ kbd {
   margin: 64px auto;
   text-align: center;
 }
+
+/* Guests and upgrade */
+.button.small {
+  padding: 3px 10px;
+  font-size: 14px;
+}
+.guest-nudge {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.paywall-features {
+  margin: 0;
+  padding-left: 20px;
+}
+.paywall .billing-toggle {
+  align-self: flex-start;
+}
