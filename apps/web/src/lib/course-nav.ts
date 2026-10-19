@@ -3,6 +3,8 @@ import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
 export type LessonContext = {
   course: CourseOutline;
   chapter: CourseOutline["chapters"][number];
+  lesson: LessonSummary;
+  prev: LessonSummary | null;
   next: LessonSummary | null;
   /** Every lesson in the chapter is done, counting `lessonId` as done. */
   chapterComplete: boolean;
@@ -25,6 +27,8 @@ export function findLessonContext(
     return {
       course,
       chapter,
+      lesson: entry.l,
+      prev: flat[i - 1]?.l ?? null,
       next: nextEntry?.l ?? null,
       chapterComplete: chapter.lessons.every((l) => l.id === lessonId || l.completed),
       endOfChapter: !nextEntry || nextEntry.chapter !== chapter,

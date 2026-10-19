@@ -25,6 +25,8 @@ const course: CourseOutline = {
 describe("findLessonContext", () => {
   it("finds the next lesson within a chapter", () => {
     const ctx = findLessonContext([course], "a");
+    expect(ctx?.lesson.id).toBe("a");
+    expect(ctx?.prev).toBeNull();
     expect(ctx?.next?.id).toBe("b");
     expect(ctx?.endOfChapter).toBe(false);
     expect(ctx?.chapterComplete).toBe(false);
@@ -32,6 +34,7 @@ describe("findLessonContext", () => {
 
   it("crosses into the next chapter and counts the current lesson as done", () => {
     const ctx = findLessonContext([course], "b");
+    expect(ctx?.prev?.id).toBe("a");
     expect(ctx?.next?.id).toBe("c");
     expect(ctx?.endOfChapter).toBe(true);
     expect(ctx?.chapterComplete).toBe(true);
