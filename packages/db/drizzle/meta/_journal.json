@@ -15,6 +15,13 @@
       "when": 1792077042272,
       "tag": "0001_entitlement_modified_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792449970813,
+      "tag": "0002_anonymous_users",
+      "breakpoints": true
     }
   ]
 }

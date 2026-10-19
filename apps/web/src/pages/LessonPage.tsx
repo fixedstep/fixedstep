@@ -1,18 +1,23 @@
 import type { GradeResult, PublicLesson, SubmitRequest } from "@fixedstep/content-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useLocation, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { CodeEditor } from "../components/CodeEditor";
 import { CompletionCard } from "../components/CompletionCard";
 import { EditorThemePicker } from "../components/EditorThemePicker";
+import { GuestNudge } from "../components/GuestNudge";
 import { LessonShell } from "../components/LessonShell";
 import { Markdown } from "../components/Markdown";
 import { NotFound } from "../components/NotFound";
 import { Preview } from "../components/Preview";
 import { ResultsPanel } from "../components/ResultsPanel";
 import { LessonSkeleton } from "../components/Skeleton";
-import { ApiError, api, type Me } from "../lib/api";
+import { BillingToggle, UpgradeErrors, useUpgrade } from "../components/Upgrade";
+import { ApiError, api } from "../lib/api";
+import { authClient } from "../lib/auth-client";
+import { withUpgrade } from "../lib/redirect";
 import { runTestsInWorker } from "../lib/run-in-worker";
+import { PRICING } from "./home/content";
 
 export function LessonPage() {
   const { lessonId } = useParams({ from: "/lessons/$lessonId" });
@@ -36,28 +41,46 @@ export function LessonPage() {
 }
 
 function Paywall({ title }: { title: string }) {
-  const checkout = useMutation({
-    mutationFn: api.checkout,
-    onSuccess: ({ url }) => window.location.assign(url),
-  });
-  const needsLogin = checkout.error instanceof ApiError && checkout.error.status === 401;
+  const [yearly, setYearly] = useState(true);
+  const plan = yearly ? PRICING.yearly : PRICING.monthly;
+  const { start, checkout, needsAccount } = useUpgrade();
+  const href = useLocation({ select: (l) => l.href });
+
   return (
     <div className="paywall">
+      <p className="eyebrow">Pro lesson</p>
       <h1>🔒 {title}</h1>
-      <p>This lesson is part of Fixedstep Pro.</p>
+      <p className="muted">Unlock this lesson and every other Pro lesson with Fixedstep Pro.</p>
+      <BillingToggle yearly={yearly} onChange={setYearly} />
+      <p className="price">
+        ${plan.price} <span className="muted">{plan.label}</span>
+      </p>
+      <ul className="paywall-features">
+        {PRICING.pro.map((f) => (
+          <li key={f}>{f}</li>
+        ))}
+      </ul>
       <button
         type="button"
         className="primary"
-        onClick={() => checkout.mutate()}
+        onClick={() => start(yearly ? "year" : "month")}
         disabled={checkout.isPending}
       >
-        Upgrade to Pro
+        {checkout.isPending
+          ? "Opening checkout…"
+          : needsAccount
+            ? "Create an account to upgrade"
+            : "Upgrade to Pro"}
       </button>
-      {needsLogin && (
-        <p>
-          <Link to="/login">Sign in</Link> first.
+      {needsAccount && (
+        <p className="muted">
+          Already have an account?{" "}
+          <Link to="/login" search={{ redirect: withUpgrade(href, yearly ? "year" : "month") }}>
+            Sign in
+          </Link>
         </p>
       )}
+      <UpgradeErrors checkout={checkout} />
     </div>
   );
 }
@@ -66,13 +89,21 @@ function useSubmit(lessonId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: SubmitRequest | Record<string, never>) => {
+      // Signed-out visitors become guests on their first submit, so their work is graded and
+      // saved like anyone's. If that fails (e.g. rate limited) they get the sign-in prompt.
+      const me = await qc.fetchQuery({ queryKey: ["me"], queryFn: api.me });
+      const becameGuest = !me.user;
+      if (becameGuest) {
+        const res = await authClient.signIn.anonymous();
+        if (res.error) throw new ApiError(401, res.error);
+      }
       // Captured before the submit so the completion card can show a streak bump.
-      const prevStreak = qc.getQueryData<Me>(["me"])?.streak;
-      return { ...(await api.submit(lessonId, body)), prevStreak };
+      const prevStreak = me.streak;
+      return { ...(await api.submit(lessonId, body)), prevStreak, becameGuest };
     },
     onSuccess: (res) => {
+      if (res.completed || res.becameGuest) void qc.invalidateQueries({ queryKey: ["me"] });
       if (res.completed) {
-        void qc.invalidateQueries({ queryKey: ["me"] });
         void qc.invalidateQueries({ queryKey: ["courses"] });
         void qc.invalidateQueries({ queryKey: ["lesson", lessonId] });
       }
@@ -98,12 +129,15 @@ function SubmitStatus({
   if (submit.isError) return <p className="error">Submission failed. Try again.</p>;
   if (!submit.data?.completed) return null;
   return (
-    <CompletionCard
-      lessonId={lessonId}
-      xpAwarded={submit.data.xpAwarded}
-      streak={submit.data.streak}
-      prevStreak={submit.data.prevStreak}
-    />
+    <>
+      <CompletionCard
+        lessonId={lessonId}
+        xpAwarded={submit.data.xpAwarded}
+        streak={submit.data.streak}
+        prevStreak={submit.data.prevStreak}
+      />
+      <GuestNudge />
+    </>
   );
 }
 

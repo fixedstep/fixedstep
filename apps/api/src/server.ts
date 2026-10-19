@@ -8,6 +8,7 @@ import { createLogProvider } from "./email/log";
 import { createSesProvider } from "./email/ses";
 import { loadEnv } from "./env";
 import { createGrader } from "./lib/grader";
+import { deleteStaleGuests } from "./lib/guests";
 
 const env = loadEnv();
 
@@ -40,6 +41,15 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`api listening on :${info.port}`);
 });
 
+// Hourly guest cleanup. Idempotent, so running it on every task is fine.
+const sweep = setInterval(() => {
+  deleteStaleGuests(db)
+    .then((n) => n > 0 && console.log(`[guests] deleted ${n} stale guest(s)`))
+    .catch((e) => console.error("[guests] cleanup failed", e));
+}, 60 * 60_000);
+sweep.unref();
+
 process.on("SIGTERM", () => {
+  clearInterval(sweep);
   server.close(() => void db.$client.end());
 });

@@ -27,7 +27,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type Me = {
-  user: { id: string; name: string; email: string; image: string | null } | null;
+  /** `isAnonymous`: a guest, created on first submit, who hasn't made an account yet. */
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+    isAnonymous: boolean;
+  } | null;
   xp: number;
   streak: number;
   pro: boolean;

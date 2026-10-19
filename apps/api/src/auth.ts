@@ -1,9 +1,11 @@
 import { account, type Db, session, user, verification } from "@fixedstep/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { anonymous } from "better-auth/plugins";
 import type { EmailMessage, EmailProvider } from "./email/provider";
 import { resetPasswordMessage, verifyEmailMessage } from "./email/templates";
 import type { Env } from "./env";
+import { mergeGuestProgress } from "./lib/guests";
 
 export function createAuth(env: Env, db: Db, email: EmailProvider) {
   // Not awaited: the response time would otherwise reveal whether an account exists, and a
@@ -41,6 +43,17 @@ export function createAuth(env: Env, db: Db, email: EmailProvider) {
         ? { github: { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET } }
         : {},
     trustedOrigins: [env.WEB_ORIGIN],
+    // Guests get an anonymous user on their first submit, so progress is graded and stored
+    // like anyone else's. Signing up or in links it: progress moves over, then the guest is
+    // deleted. Stale guests are swept by deleteStaleGuests.
+    plugins: [
+      anonymous({
+        onLinkAccount: ({ anonymousUser, newUser }) =>
+          mergeGuestProgress(db, anonymousUser.user.id, newUser.user.id),
+      }),
+    ],
+    // Each guest is a user row; cap how fast one client can mint them (per IP, in-memory).
+    rateLimit: { customRules: { "/sign-in/anonymous": { window: 3600, max: 10 } } },
   });
 }
 

@@ -12,6 +12,7 @@ export function billingRoutes({ db, billing, env }: Deps) {
   r.post("/billing/checkout", async (c) => {
     const user = c.get("user");
     if (!user) return c.json({ error: "sign in first" }, 401);
+    if (user.isAnonymous) return c.json({ error: "create an account first", code: "guest" }, 401);
     // A verified address is known to receive mail; Polar rejects checkouts whose email domain
     // can't (422), and receipts and the customer portal link go to this address.
     if (!user.emailVerified) {
