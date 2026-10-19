@@ -36,6 +36,7 @@ export function lessonRoutes({ db, grader }: Deps) {
           eq(lessons.id, id),
           isNull(lessons.archivedAt),
           isNull(chapters.archivedAt),
+          isNull(courses.archivedAt),
           eq(courses.published, true),
         ),
       )

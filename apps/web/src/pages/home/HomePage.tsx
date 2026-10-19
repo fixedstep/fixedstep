@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ManageBillingButton } from "../../components/ManageBillingButton";
 import { Playground } from "../../components/Playground";
+import { CourseListSkeleton } from "../../components/Skeleton";
 import { ApiError, api, type Me } from "../../lib/api";
 import { authClient } from "../../lib/auth-client";
 import { allLessons, CourseCatalog, courseProgress } from "./CourseCatalog";
@@ -43,7 +44,7 @@ export function HomePage() {
           eyebrow="Courses"
           title={signedIn ? "Your courses" : "Start with the fundamentals"}
         />
-        {courses.isPending && <p className="muted">Loading courses…</p>}
+        {courses.isPending && <CourseListSkeleton />}
         {courses.isError && <p className="error">Couldn't load courses.</p>}
         {courses.data && <CourseCatalog courses={courses.data} signedIn={signedIn} />}
       </section>

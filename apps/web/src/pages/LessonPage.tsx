@@ -5,9 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { CodeEditor } from "../components/CodeEditor";
 import { CompletionCard } from "../components/CompletionCard";
 import { EditorThemePicker } from "../components/EditorThemePicker";
+import { LessonShell } from "../components/LessonShell";
 import { Markdown } from "../components/Markdown";
+import { NotFound } from "../components/NotFound";
 import { Preview } from "../components/Preview";
 import { ResultsPanel } from "../components/ResultsPanel";
+import { LessonSkeleton } from "../components/Skeleton";
 import { ApiError, api, type Me } from "../lib/api";
 import { runTestsInWorker } from "../lib/run-in-worker";
 
@@ -15,10 +18,21 @@ export function LessonPage() {
   const { lessonId } = useParams({ from: "/lessons/$lessonId" });
   const lesson = useQuery({ queryKey: ["lesson", lessonId], queryFn: () => api.lesson(lessonId) });
 
-  if (lesson.isPending) return <p className="muted">Loading…</p>;
-  if (lesson.isError) return <p className="error">Couldn't load this lesson.</p>;
-  if ("locked" in lesson.data) return <Paywall title={lesson.data.title} />;
-  return <Lesson key={lesson.data.id} lesson={lesson.data} />;
+  if (lesson.error instanceof ApiError && lesson.error.status === 404)
+    return <NotFound what="lesson" />;
+  return (
+    <LessonShell lessonId={lessonId}>
+      {lesson.isPending ? (
+        <LessonSkeleton />
+      ) : lesson.isError ? (
+        <p className="error">Couldn't load this lesson.</p>
+      ) : "locked" in lesson.data ? (
+        <Paywall title={lesson.data.title} />
+      ) : (
+        <Lesson key={lesson.data.id} lesson={lesson.data} />
+      )}
+    </LessonShell>
+  );
 }
 
 function Paywall({ title }: { title: string }) {

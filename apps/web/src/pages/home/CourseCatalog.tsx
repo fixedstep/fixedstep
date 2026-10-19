@@ -1,8 +1,6 @@
 import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
 import { Link } from "@tanstack/react-router";
-
-const KIND_ICON = { reading: "📖", quiz: "❓", code: "⌨️", sim: "🎮" } as const;
-const KIND_LABEL = { reading: "Reading", quiz: "Quiz", code: "Code", sim: "Game" } as const;
+import { KIND_ICON, KIND_LABEL } from "../../lib/lesson-kind";
 
 export const allLessons = (course: CourseOutline) => course.chapters.flatMap((ch) => ch.lessons);
 
