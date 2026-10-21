@@ -2,9 +2,15 @@
 # `pnpm infra config set --path 'aws:allowedAccountIds[0]' <account-id> -s aws-staging`.
 # Secrets (GITHUB_CLIENT_ID, POLAR_*, SMTP_URL...) go in with `config set --secret`; see README.
 config:
-  aws:region: us-east-1
+  # The organization's SCP allows workloads only in us-east-2 (us-east-1 is global services only).
+  aws:region: us-east-2
   aws:defaultTags:
     tags:
       app: fixedstep
       stage: staging
-  # fixedstep:emailFrom: "Fixedstep <noreply@staging.fixedstep.com>"
+      # fixedstep:emailFrom: "Fixedstep <noreply@staging.fixedstep.com>"
+  aws:allowedAccountIds:
+    - 384567542318
+  fixedstep:CONTENT_SYNC_TOKEN:
+    secure: v1:dUPl/2crLO9R6+/S:MintF0KodBFQzoJO2xJC0ZfEOsbeRaD8Xnr9y332KJggND9i/ukH116ei3GFRyO2G+v22whWmI3nLxOa9Rzqqw==
+encryptionsalt: v1:FfF8kDoBT6A=:v1:xliDkGQyrjBy+/Lp:i6jQ5YauUB/E0o+D7mXSlqb02DqEvw==

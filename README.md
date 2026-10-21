@@ -147,9 +147,14 @@ Custom domain: set `domain` in `infra/src/config.ts`, verify the domain for the 
 
 ### AWS setup (per stage, as an account admin)
 
-1. Use a dedicated account per stage, and sign in to it with the `aws` CLI (e.g. `aws sso login`
-   with a profile, then `export AWS_PROFILE=<profile>`).
-2. State: `aws s3 mb s3://<account-id>-fixedstep-pulumi-state --region us-east-1`, then
+Everything runs in **us-east-2**. The organization's region SCP allows workloads only there; in
+us-east-1 it allows just global services (IAM, billing, Route 53…).
+
+1. Use a dedicated account per stage, created in the organization (AWS Organizations → Add an
+   AWS account). Sign in to it from the management account's console with **Switch role**
+   (`OrganizationAccountAccessRole`), then run `aws login --profile fixedstep-<stage> --region us-east-2`
+   while that session is active, and `export AWS_PROFILE=fixedstep-<stage>`.
+2. State: `aws s3 mb s3://<account-id>-fixedstep-pulumi-state --region us-east-2`, then
    `aws s3api put-bucket-versioning --bucket <account-id>-fixedstep-pulumi-state --versioning-configuration Status=Enabled`
    and `cd infra && pulumi login s3://<account-id>-fixedstep-pulumi-state`.
 3. `pnpm infra stack init aws-<stage>` (first time), then pin the account so the stack can never

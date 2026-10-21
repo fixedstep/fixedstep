@@ -65,7 +65,7 @@ export function createDatabase(
       // Minor upgrades are applied by AWS; don't fight them on the next `up`.
       { ...stateful, ignoreChanges: ["engineVersion"] },
     );
-    new aws.rds.ClusterInstance(
+    const instance = new aws.rds.ClusterInstance(
       "postgres-1",
       {
         identifier: `${name}-1`,
@@ -76,7 +76,9 @@ export function createDatabase(
       },
       { ...stateful, ignoreChanges: ["engineVersion"] },
     );
-    host = cluster.endpoint;
+    // The cluster endpoint doesn't resolve until an instance is up. Tie the URL (and so
+    // everything that uses it, like the API) to the instance, not just the cluster.
+    host = pulumi.all([cluster.endpoint, instance.id]).apply(([endpoint]) => endpoint);
   } else {
     const instance = new aws.rds.Instance(
       "postgres",

@@ -24,12 +24,31 @@ export function createIngress(
     { name, subnetIds: args.subnetIds, securityGroupIds: [args.securityGroupId] },
     opts,
   );
+  // One line per request. A 5xx from API Gateway itself (not the app) says why in `integrationError`.
+  const accessLogs = new aws.cloudwatch.LogGroup(
+    "http",
+    { name: `/apigateway/${name}`, retentionInDays: 14 },
+    opts,
+  );
   const stageResource = new aws.apigatewayv2.Stage(
     "http",
     {
       apiId: api.id,
       name: "$default",
       autoDeploy: true,
+      accessLogSettings: {
+        destinationArn: accessLogs.arn,
+        format: JSON.stringify({
+          requestId: "$context.requestId",
+          method: "$context.httpMethod",
+          path: "$context.path",
+          status: "$context.status",
+          latencyMs: "$context.responseLatency",
+          integrationStatus: "$context.integration.status",
+          integrationError: "$context.integrationErrorMessage",
+          error: "$context.error.message",
+        }),
+      },
       // A cap on runaway traffic (and the bill): requests per second across the API.
       defaultRouteSettings: { throttlingRateLimit: 100, throttlingBurstLimit: 200 },
     },
