@@ -1,6 +1,18 @@
 export const APP = "fixedstep";
 /** GitHub repo allowed to deploy (via the cloud's GitHub OIDC trust). */
-export const GITHUB = { platformRepo: "fixedstep/fixedstep" };
+export const GITHUB = {
+  platformRepo: "fixedstep/fixedstep",
+  // The org sends immutable IDs in the OIDC subject (`owner@id/repo@id`), so a deleted and
+  // recreated repo with the same name can't deploy. IDs: `gh api repos/fixedstep/fixedstep`.
+  ownerId: 343194407,
+  repoId: 1417547510,
+};
+
+/** The OIDC `sub` claim GitHub Actions sends for a job running in `environment`. */
+export function githubSubject(environment: string) {
+  const [owner, repo] = GITHUB.platformRepo.split("/");
+  return `repo:${owner}@${GITHUB.ownerId}/${repo}@${GITHUB.repoId}:environment:${environment}`;
+}
 
 export type Stage = "staging" | "prod";
 export const STAGES = ["staging", "prod"] as const satisfies Stage[];

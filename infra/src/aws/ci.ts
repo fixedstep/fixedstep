@@ -1,14 +1,13 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { GITHUB, resourceName, type Stage } from "../config";
+import { githubSubject, resourceName, type Stage } from "../config";
 
 /**
  * Lets GitHub Actions deploy this stage's account without long-lived keys. Each stage has its
  * own account, so this exists once per stage. The first `pulumi up` is run by hand (CI can't
  * use a trust that doesn't exist yet); after that CI keeps it up to date with everything else.
  *
- * Trust is keyed on the GitHub *environment* (the OIDC subject is
- * `repo:<org>/<repo>:environment:<name>` when a job declares one).
+ * Trust is keyed on the GitHub *environment* (see `githubSubject` for the OIDC subject).
  */
 export function createGithubDeployer(stage: Stage, opts: pulumi.CustomResourceOptions) {
   const environment = stage === "prod" ? "production" : "staging";
@@ -37,7 +36,7 @@ export function createGithubDeployer(stage: Stage, opts: pulumi.CustomResourceOp
             Condition: {
               StringEquals: {
                 [`${issuer}:aud`]: "sts.amazonaws.com",
-                [`${issuer}:sub`]: `repo:${GITHUB.platformRepo}:environment:${environment}`,
+                [`${issuer}:sub`]: githubSubject(environment),
               },
             },
           },
