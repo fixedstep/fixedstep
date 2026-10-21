@@ -8,7 +8,7 @@ await build({
   target: "node24",
   format: "esm",
   sourcemap: true,
-  // Only used when GRADER_MODE=local (dev); production invokes the grader Lambda.
+  // Only used when GRADER_MODE=local (dev); production calls the grader service.
   external: ["quickjs-emscripten"],
   // Some CJS dependencies call require(); give the ESM bundle one.
   banner: {

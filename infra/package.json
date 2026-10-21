@@ -5,17 +5,16 @@
   "type": "module",
   "license": "AGPL-3.0-only",
   "scripts": {
-    "cdk": "cdk",
-    "synth:staging": "cdk synth -c stage=staging",
-    "synth:prod": "cdk synth -c stage=prod",
+    "pulumi": "pulumi",
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.273.0",
-    "constructs": "^10.8.1"
+    "@pulumi/docker-build": "0.0.22",
+    "@pulumi/gcp": "9.37.0",
+    "@pulumi/pulumi": "3.267.0",
+    "@pulumi/random": "4.21.2"
   },
   "devDependencies": {
-    "aws-cdk": "^2.1145.0",
-    "esbuild": "^0.28.2"
+    "tsx": "^4.23.15"
   }
 }

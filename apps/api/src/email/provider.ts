@@ -1,6 +1,6 @@
 /**
- * Email is behind this interface so the sender can be swapped (SES today; maybe Postmark or
- * Resend later). Callers build messages from `templates.ts`; providers only deliver them.
+ * Email is behind this interface so the sender can be swapped (SMTP covers most
+ * providers). Callers build messages from `templates.ts`; providers only deliver them.
  */
 export type EmailMessage = {
   to: string;

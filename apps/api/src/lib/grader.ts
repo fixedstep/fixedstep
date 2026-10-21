@@ -13,18 +13,18 @@ export function createGrader(env: Env): Grader {
     };
   }
 
-  const functionName = env.GRADER_FUNCTION_NAME as string;
+  // The isolated grader service (apps/grader). Its own limits cap a run at ~3s; the timeout
+  // here also covers a cold start.
+  const url = new URL("/grade", env.GRADER_URL);
+  const auth = `Bearer ${env.GRADER_TOKEN}`;
   return async (req) => {
-    const { LambdaClient, InvokeCommand } = await import("@aws-sdk/client-lambda");
-    const client = new LambdaClient({});
-    const out = await client.send(
-      new InvokeCommand({
-        FunctionName: functionName,
-        Payload: new TextEncoder().encode(JSON.stringify(req)),
-      }),
-    );
-    const body = new TextDecoder().decode(out.Payload);
-    if (out.FunctionError) throw new Error(`grader failed: ${body}`);
-    return JSON.parse(body) as GradeResult;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: auth },
+      body: JSON.stringify(req),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) throw new Error(`grader failed: ${res.status} ${await res.text()}`);
+    return (await res.json()) as GradeResult;
   };
 }

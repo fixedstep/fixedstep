@@ -1,7 +1,8 @@
 # Validates every lesson (solutions must pass their tests in the production QuickJS grader),
-# bundles, and uploads. Upload triggers the in-VPC sync Lambda. This repo never holds DB
-# credentials. Set AWS_ACCOUNT_ID as an *environment* variable on `staging` and `production`
-# (one account each).
+# bundles, and POSTs the bundle to the stage's API, which syncs it into the database. This repo
+# never holds DB or cloud credentials. On the `staging` and `production` environments, set the
+# variable SITE_URL (e.g. https://staging.fixedstep.com) and the secret CONTENT_SYNC_TOKEN (the
+# stage's token; see the platform README).
 #
 # PLATFORM_REF pins the platform version that validates and bundles this content, so a schema
 # change in the platform can't break publishing without warning. Bump it in a PR; the PR run
@@ -15,7 +16,6 @@ on:
   pull_request:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
@@ -25,8 +25,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'pull_request' && '' || (startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging') }}
-    env:
-      STAGE: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,11 +49,12 @@ jobs:
         working-directory: platform
         run: pnpm --filter @fixedstep/content-cli start bundle "$GITHUB_WORKSPACE/content" "$GITHUB_WORKSPACE/bundle.json"
       - if: github.event_name != 'pull_request'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/fixedstep-${{ env.STAGE }}-github-content-publisher
-          aws-region: us-east-1
-      - if: github.event_name != 'pull_request'
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          CONTENT_SYNC_TOKEN: ${{ secrets.CONTENT_SYNC_TOKEN }}
         run: |
-          aws s3 cp bundle.json \
-            "s3://fixedstep-${STAGE}-content-bundles-${{ vars.AWS_ACCOUNT_ID }}/bundles/${GITHUB_SHA}.json"
+          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${CONTENT_SYNC_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary @bundle.json \
+            "${SITE_URL}/internal/content"

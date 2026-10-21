@@ -1,0 +1,14 @@
+name: fixedstep
+description: Fixedstep platform infrastructure (one stack per stage; see README "Deploying")
+main: src/index.ts
+runtime:
+  name: nodejs
+  options:
+    packagemanager: pnpm
+    # Run the TypeScript with tsx like the rest of the repo, not Pulumi's bundled ts-node.
+    typescript: false
+    nodeargs: "--import tsx"
+config:
+  fixedstep:cloud:
+    description: Cloud target in src/<cloud>/ (only gcp so far)
+    default: gcp

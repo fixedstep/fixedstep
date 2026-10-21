@@ -3,7 +3,7 @@ name: fixedstep
 # Local development stack.
 #   docker compose up                      # postgres + api (:3000) + web (:5173), hot reload
 #   docker compose run --rm api pnpm content:sync   # loads $CONTENT_DIR (default content-sample)
-#   docker compose --profile prod up api-prod   # production API image on :3001
+#   docker compose --profile prod up api-prod   # production images (API + SPA + grader) on :3001
 
 x-node: &node
   build:
@@ -77,7 +77,8 @@ services:
       api:
         condition: service_started
 
-  # The production image (apps/api/Dockerfile) against the local database.
+  # The production images (apps/api/Dockerfile serves API + SPA; apps/grader/Dockerfile) against
+  # the local database, wired the way they're deployed.
   api-prod:
     profiles: [prod]
     build:
@@ -87,12 +88,28 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://fixedstep:fixedstep@postgres:5432/fixedstep
-      GRADER_MODE: local
+      BETTER_AUTH_URL: http://localhost:3001
+      WEB_ORIGIN: http://localhost:3001
+      GRADER_MODE: http
+      GRADER_URL: http://grader-prod:3001
+      GRADER_TOKEN: &grader-token local-grader-token-not-a-secret-000000
+      CONTENT_SYNC_TOKEN: local-content-token-not-a-secret-00000
     ports:
       - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
+      grader-prod:
+        condition: service_started
+
+  grader-prod:
+    profiles: [prod]
+    build:
+      context: .
+      dockerfile: apps/grader/Dockerfile
+    image: fixedstep-grader:local
+    environment:
+      GRADER_TOKEN: *grader-token
 
 volumes:
   pgdata:
