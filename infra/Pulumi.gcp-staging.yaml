@@ -1,4 +1,4 @@
-# Non-secret stack config. Set the project once it exists: `pnpm infra config set gcp:project <id> -s staging`.
+# Non-secret stack config. Set the project once it exists: `pnpm infra config set gcp:project <id> -s gcp-staging`.
 # Secrets (GITHUB_CLIENT_ID, POLAR_*, SMTP_URL...) go in with `config set --secret`; see README.
 config:
   gcp:region: us-east1

@@ -25,6 +25,20 @@ export type ServiceSpec = {
 
 export type AppSecrets = Record<string, pulumi.Output<string>>;
 
+export type DnsRecord = { name: string; type: string; rrdata: string };
+
+/** What every cloud target returns; `index.ts` exports these as stack outputs. */
+export type DeployOutputs = {
+  siteUrl: pulumi.Output<string>;
+  apiUrl: pulumi.Output<string>;
+  /** Records to create at the DNS provider when a domain is configured. */
+  dnsRecords?: pulumi.Output<DnsRecord[]>;
+  contentSyncToken: pulumi.Output<string>;
+  /** Variables for the stage's GitHub environment (see .github/workflows/deploy.yml). */
+  github: Record<string, pulumi.Input<string>>;
+  ops?: Record<string, pulumi.Input<unknown>>;
+};
+
 const PROVIDER_SECRETS = [
   "GITHUB_CLIENT_ID",
   "GITHUB_CLIENT_SECRET",
@@ -35,27 +49,39 @@ const PROVIDER_SECRETS = [
   "SMTP_URL",
 ];
 
-const generated = (name: string, length = 48) =>
-  new random.RandomPassword(name, { length, special: false }).result;
-
 /**
  * Generated secrets (created once, kept encrypted in Pulumi state) plus provider credentials
  * from stack config (`pulumi config set --secret <NAME> <value>`). Unset provider secrets are
  * skipped, so the API runs without GitHub login, billing or email until they're filled in.
  * DATABASE_URL is added by the cloud target once the database exists.
+ *
+ * A generated secret can be pinned the same way (`config set --secret BETTER_AUTH_SECRET …`).
+ * Moving to another cloud does that so sessions and the content repo's token keep working.
  */
-export function appSecrets(): { secrets: AppSecrets; dbPassword: pulumi.Output<string> } {
+type GeneratedSecrets = Record<
+  "BETTER_AUTH_SECRET" | "GRADER_TOKEN" | "CONTENT_SYNC_TOKEN",
+  pulumi.Output<string>
+>;
+
+export function appSecrets(): {
+  secrets: AppSecrets & GeneratedSecrets;
+  dbPassword: pulumi.Output<string>;
+} {
   const cfg = new pulumi.Config();
-  const secrets: AppSecrets = {
-    BETTER_AUTH_SECRET: generated("better-auth-secret"),
-    GRADER_TOKEN: generated("grader-token"),
-    CONTENT_SYNC_TOKEN: generated("content-sync-token"),
+  const generated = (key: string, length = 48) =>
+    cfg.getSecret(key) ??
+    new random.RandomPassword(key.toLowerCase().replaceAll("_", "-"), { length, special: false })
+      .result;
+  const secrets: AppSecrets & GeneratedSecrets = {
+    BETTER_AUTH_SECRET: generated("BETTER_AUTH_SECRET"),
+    GRADER_TOKEN: generated("GRADER_TOKEN"),
+    CONTENT_SYNC_TOKEN: generated("CONTENT_SYNC_TOKEN"),
   };
   for (const key of PROVIDER_SECRETS) {
     const value = cfg.getSecret(key);
     if (value) secrets[key] = value;
   }
-  return { secrets, dbPassword: generated("db-password", 32) };
+  return { secrets, dbPassword: generated("DB_PASSWORD", 32) };
 }
 
 export const graderSpec: ServiceSpec = {

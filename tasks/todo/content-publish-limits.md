@@ -26,6 +26,13 @@ This runs into two Cloud Run limits:
 Neither limit matters at today's content size. Both will eventually break publishing as
 courses grow. The old S3 → Lambda path had neither limit.
 
+**On AWS** (`aws-<stage>` stacks), requests come in through an API Gateway HTTP API
+(`infra/src/aws/ingress.ts`). Its limits are stricter: **10 MB** request bodies and a **30s**
+integration timeout, and neither can be raised. Whatever fix is chosen has to fit under 10 MB
+per request, which favors option A (one course per request). The 30s ceiling also means
+"give the API a longer timeout" doesn't help on AWS, so faster `syncContent` (batched inserts)
+matters more there.
+
 ## Suggested approach
 
 Pick one of these and note the choice here.

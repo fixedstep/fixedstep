@@ -13,16 +13,22 @@ permissions:
 
 jobs:
   deploy:
-    # Skipped until the DEPLOY_ENABLED repo variable is "true". The GCP_* and PULUMI_* values
-    # are set per GitHub environment (each stage is its own project); see README "Deploying".
+    # Skipped until the DEPLOY_ENABLED repo variable is "true". Each GitHub environment says which
+    # cloud its stage runs on (CLOUD = gcp | aws) and holds that cloud's variables; see README
+    # "Deploying".
     if: vars.DEPLOY_ENABLED == 'true'
-    # amd64: Cloud Run runs linux/amd64 images.
+    # amd64: Cloud Run and Fargate both run linux/amd64 images here.
     runs-on: ubuntu-24.04
     environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}
     concurrency: deploy-${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || 'staging' }}
     env:
       STAGE: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || 'staging' }}
+      CLOUD: ${{ vars.CLOUD }}
     steps:
+      - if: env.CLOUD != 'gcp' && env.CLOUD != 'aws'
+        run: |
+          echo "Set the CLOUD variable (gcp or aws) on the GitHub environment" >&2
+          exit 1
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -31,15 +37,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      - uses: google-github-actions/auth@v2
+      - if: env.CLOUD == 'gcp'
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - if: env.CLOUD == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-duration-seconds: 7200
       - uses: docker/setup-buildx-action@v3
       - uses: pulumi/actions@v6
         with:
           command: up
-          stack-name: ${{ env.STAGE }}
+          stack-name: ${{ env.CLOUD }}-${{ env.STAGE }}
           work-dir: infra
           cloud-url: ${{ vars.PULUMI_BACKEND_URL }}
         env:

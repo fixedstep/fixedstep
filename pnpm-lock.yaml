@@ -146,6 +146,9 @@ importers:
 
   infra:
     dependencies:
+      '@pulumi/aws':
+        specifier: 7.49.0
+        version: 7.49.0(typescript@7.0.2)
       '@pulumi/docker-build':
         specifier: 0.0.22
         version: 0.0.22(typescript@7.0.2)
@@ -1132,6 +1135,9 @@ packages:
 
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
+
+  '@pulumi/aws@7.49.0':
+    resolution: {integrity: sha512-WM27HFAJk0qwaKmnfC0/O48kv9neSd6Xh2emNptEIZ3KkRRF3QEhb1cm0TnbgOgz/IhA2vl8+ChAIyj28Y8u0g==}
 
   '@pulumi/docker-build@0.0.22':
     resolution: {integrity: sha512-DcnwoDv7kBM6MBhuEfkiATDwKDqGCNPICxUt7gbYSdpb/UuT+6K7pNMQu7mCNZV7feqZh9EJ3P20UXCq1R+YQg==}
@@ -2279,6 +2285,11 @@ packages:
 
   micromark@4.0.3:
     resolution: {integrity: sha512-oGYfQzHSG5dOMovQcJ3fyTmZlWAWpi0XA0sJwJs+i6OT88o1+Jtw/8z0CmdowSLxGhhFK89rQ/oXph/wN02PNw==}
+
+  mime@2.6.0:
+    resolution: {integrity: sha512-USPkMeET31rOMiarsBNIHZKLGgvKc/LrjofAnBlOttf5ajRvqiRA8QsenbcooctK6d6Ts6aqZXBA+XbkKthiQg==}
+    engines: {node: '>=4.0.0'}
+    hasBin: true
 
   mimic-fn@2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
@@ -3642,6 +3653,15 @@ snapshots:
 
   '@protobufjs/utf8@1.1.2': {}
 
+  '@pulumi/aws@7.49.0(typescript@7.0.2)':
+    dependencies:
+      '@pulumi/pulumi': 3.267.0(typescript@7.0.2)
+      mime: 2.6.0
+    transitivePeerDependencies:
+      - supports-color
+      - ts-node
+      - typescript
+
   '@pulumi/docker-build@0.0.22(typescript@7.0.2)':
     dependencies:
       '@pulumi/pulumi': 3.267.0(typescript@7.0.2)
@@ -4747,6 +4767,8 @@ snapshots:
       micromark-util-types: 2.0.3
     transitivePeerDependencies:
       - supports-color
+
+  mime@2.6.0: {}
 
   mimic-fn@2.1.0: {}
 

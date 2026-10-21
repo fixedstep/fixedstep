@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { apiSpec, appSecrets, graderSpec } from "../app-spec";
+import { apiSpec, appSecrets, type DeployOutputs, graderSpec } from "../app-spec";
 import { resourceName, type Stage, type StageConfig } from "../config";
 import { createGithubDeployer } from "./ci";
 import { createDatabase } from "./database";
@@ -22,7 +22,7 @@ const APIS = [
   "sts.googleapis.com",
 ];
 
-export function deployGcp(config: StageConfig) {
+export function deployGcp(config: StageConfig): DeployOutputs {
   const { stage } = config;
   const gcpConfig = new pulumi.Config("gcp");
   const project = gcpConfig.require("project");
@@ -115,7 +115,15 @@ export function deployGcp(config: StageConfig) {
     siteUrl,
     apiUrl: api.service.uri,
     /** Add these records at your DNS provider when a domain is configured. */
-    dnsRecords: domain?.statuses.apply((s) => (s ?? []).flatMap((x) => x.resourceRecords ?? [])),
+    dnsRecords: domain?.statuses.apply((s) =>
+      (s ?? []).flatMap((x) =>
+        (x.resourceRecords ?? []).map((r) => ({
+          name: r.name,
+          type: r.type ?? "",
+          rrdata: r.rrdata,
+        })),
+      ),
+    ),
     contentSyncToken: secrets.CONTENT_SYNC_TOKEN,
     github: {
       GCP_WORKLOAD_IDENTITY_PROVIDER: deployer.provider,

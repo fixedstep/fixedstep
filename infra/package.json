@@ -9,6 +9,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@pulumi/aws": "7.49.0",
     "@pulumi/docker-build": "0.0.22",
     "@pulumi/gcp": "9.37.0",
     "@pulumi/pulumi": "3.267.0",

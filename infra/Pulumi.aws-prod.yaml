@@ -1,0 +1,10 @@
+# Non-secret stack config. Pin the account so this stack can never touch another one:
+# `pnpm infra config set --path 'aws:allowedAccountIds[0]' <account-id> -s aws-prod`.
+# Secrets (GITHUB_CLIENT_ID, POLAR_*, SMTP_URL...) go in with `config set --secret`; see README.
+config:
+  aws:region: us-east-1
+  aws:defaultTags:
+    tags:
+      app: fixedstep
+      stage: prod
+  # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"

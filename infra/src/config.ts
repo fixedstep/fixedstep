@@ -5,6 +5,23 @@ export const GITHUB = { platformRepo: "fixedstep/fixedstep" };
 export type Stage = "staging" | "prod";
 export const STAGES = ["staging", "prod"] as const satisfies Stage[];
 
+export type Cloud = "gcp" | "aws";
+export const CLOUDS = ["gcp", "aws"] as const satisfies Cloud[];
+
+/**
+ * Stacks are named `<cloud>-<stage>` (e.g. `aws-staging`), so each cloud's copy of a stage is
+ * brought up and torn down on its own, and a migration can run both side by side.
+ */
+export function parseStack(name: string): { cloud: Cloud; stage: Stage } {
+  const [cloud, stage, ...rest] = name.split("-");
+  if (rest.length || !CLOUDS.includes(cloud as Cloud) || !STAGES.includes(stage as Stage)) {
+    throw new Error(
+      `unknown stack "${name}" (expected <cloud>-<stage>: (${CLOUDS.join("|")})-(${STAGES.join("|")}))`,
+    );
+  }
+  return { cloud: cloud as Cloud, stage: stage as Stage };
+}
+
 /** Cloud-neutral stage settings. Instance types/tiers live with each cloud target. */
 export interface StageConfig {
   stage: Stage;
