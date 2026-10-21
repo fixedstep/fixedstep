@@ -32,6 +32,16 @@ it("rejects bundles from another platform version", async () => {
   expect(await res.json()).toEqual({ error: expect.stringMatching(/unsupported bundle/) });
 });
 
+it("rejects malformed bundles", async () => {
+  for (const body of ["not json", "null", JSON.stringify({ version: 1 })]) {
+    const res = await publish(body);
+    expect(res.status).toBe(400);
+  }
+  const res = await publish(JSON.stringify({ version: 1, createdAt: "", courses: [{}] }));
+  expect(res.status).toBe(400);
+  expect(await res.json()).toEqual({ error: expect.stringMatching(/invalid bundle/) });
+});
+
 it("syncs a bundle into the database", async () => {
   const loaded = await loadContent(SAMPLE);
   const res = await publish(serializeBundle(loaded));
