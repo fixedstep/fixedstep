@@ -12,7 +12,12 @@ permissions:
   contents: read
 
 jobs:
+  # The full CI checks (lint, typecheck, tests, content, web build), once, before deploying.
+  check:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: check
     # Skipped until the DEPLOY_ENABLED repo variable is "true". Each GitHub environment says which
     # cloud its stage runs on (CLOUD = gcp | aws) and holds that cloud's variables; see README
     # "Deploying".
@@ -36,7 +41,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
       - if: env.CLOUD == 'gcp'
         uses: google-github-actions/auth@v2
         with:
