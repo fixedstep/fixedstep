@@ -8,7 +8,11 @@
 - Never send `lessons.hiddenTests`, `lessons.solution` or quiz `answer`s to the browser; browser
   responses are built field-by-field from `@fixedstep/content-schema` DTOs.
 - XP/progress are only written after server-side grading (`apps/api/src/lib/progress.ts`).
-- Infra naming: `resourceName(stage, x)` → `fixedstep-<stage>-x`; stacks `Fixedstep-<Stage>-X`.
+- Infra is Pulumi (TS) in `infra/`, one stack per stage. Keep the app cloud-neutral (no cloud
+  SDKs in `apps/`/`packages/`); cloud specifics live only in `infra/src/<cloud>/`, which maps
+  `infra/src/app-spec.ts`. Stacks are `<cloud>-<stage>` (`gcp-staging`, `aws-prod`, …); keep the
+  GCP and AWS targets in step when the app spec changes. Naming: `resourceName(stage, x)` →
+  `fixedstep-<stage>-x`.
 - Course content is private; only `content-sample/` lives here. `CONTENT_DIR` points the
   `content:*` scripts (and the compose `/content` mount) at the private repo; the content repo
   skeleton is `packages/content-cli/template/` (dotfiles stored as `_name`), used by `init`.

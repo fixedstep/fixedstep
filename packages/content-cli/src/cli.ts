@@ -14,7 +14,7 @@ const USAGE = `usage:
   fixedstep-content validate [content-dir]
   fixedstep-content sync [content-dir]               (needs DATABASE_URL)
   fixedstep-content dev [content-dir]                (needs DATABASE_URL; re-syncs on every save)
-  fixedstep-content bundle <content-dir> <out.json>  (validated bundle for the sync Lambda)
+  fixedstep-content bundle <content-dir> <out.json>  (validated bundle for POST /internal/content)
   fixedstep-content new <course>/<chapter>/<lesson> [${LessonKind.options.join("|")}]
   fixedstep-content init <dir>                       (new content repo skeleton)
 

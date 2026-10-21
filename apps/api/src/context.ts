@@ -14,7 +14,7 @@ export type Deps = {
 
 export type AppEnv = { Variables: { user: SessionUser | null } };
 
-/** Best-effort client key for rate limiting (CloudFront → ALB append to X-Forwarded-For). */
+/** Best-effort client key for rate limiting (the platform's load balancer sets X-Forwarded-For). */
 export function clientKey(user: SessionUser | null, headers: Headers): string {
   if (user) return `u:${user.id}`;
   const ip = headers.get("x-forwarded-for")?.split(",")[0]?.trim();

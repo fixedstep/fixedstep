@@ -1,0 +1,11 @@
+# Non-secret stack config. Pin the account so this stack can never touch another one:
+# `pnpm infra config set --path 'aws:allowedAccountIds[0]' <account-id> -s aws-prod`.
+# Secrets (GITHUB_CLIENT_ID, POLAR_*, SMTP_URL...) go in with `config set --secret`; see README.
+config:
+  # The organization's SCP allows workloads only in us-east-2 (us-east-1 is global services only).
+  aws:region: us-east-2
+  aws:defaultTags:
+    tags:
+      app: fixedstep
+      stage: prod
+  # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"

@@ -21,7 +21,7 @@
     "content:sync": "pnpm --filter @fixedstep/content-cli start sync",
     "content:dev": "pnpm --filter @fixedstep/content-cli start dev",
     "content:new": "pnpm --filter @fixedstep/content-cli start new",
-    "cdk": "pnpm --filter @fixedstep/infra cdk"
+    "infra": "pnpm --filter @fixedstep/infra pulumi"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

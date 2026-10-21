@@ -11,8 +11,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@aws-sdk/client-lambda": "^3.1150.0",
-    "@aws-sdk/client-sesv2": "^3.1152.0",
+    "@fixedstep/content-cli": "workspace:*",
     "@fixedstep/content-schema": "workspace:*",
     "@fixedstep/db": "workspace:*",
     "@fixedstep/test-harness": "workspace:*",
@@ -20,6 +19,7 @@
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
+    "nodemailer": "10.0.14",
     "zod": "^4.6.7"
   },
   "devDependencies": {
