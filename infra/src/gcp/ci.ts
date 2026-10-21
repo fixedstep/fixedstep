@@ -1,14 +1,13 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { GITHUB, resourceName, type Stage } from "../config";
+import { githubSubject, resourceName, type Stage } from "../config";
 
 /**
  * Lets GitHub Actions deploy this stage's project without long-lived keys. Each stage has its
  * own project, so this exists once per stage. The first `pulumi up` is run by hand (CI can't
  * use a trust that doesn't exist yet); after that CI keeps it up to date with everything else.
  *
- * Trust is keyed on the GitHub *environment* (the OIDC subject is
- * `repo:<org>/<repo>:environment:<name>` when a job declares one).
+ * Trust is keyed on the GitHub *environment* (see `githubSubject` for the OIDC subject).
  */
 export function createGithubDeployer(
   stage: Stage,
@@ -29,7 +28,7 @@ export function createGithubDeployer(
       workloadIdentityPoolProviderId: "github",
       oidc: { issuerUri: "https://token.actions.githubusercontent.com" },
       attributeMapping: { "google.subject": "assertion.sub" },
-      attributeCondition: `assertion.sub == "repo:${GITHUB.platformRepo}:environment:${environment}"`,
+      attributeCondition: `assertion.sub == "${githubSubject(environment)}"`,
     },
     opts,
   );
@@ -44,7 +43,7 @@ export function createGithubDeployer(
     {
       serviceAccountId: deployer.name,
       role: "roles/iam.workloadIdentityUser",
-      member: pulumi.interpolate`principal://iam.googleapis.com/${pool.name}/subject/repo:${GITHUB.platformRepo}:environment:${environment}`,
+      member: pulumi.interpolate`principal://iam.googleapis.com/${pool.name}/subject/${githubSubject(environment)}`,
     },
     opts,
   );
