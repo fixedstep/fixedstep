@@ -121,7 +121,11 @@ export function cloudRunService(
               ...Object.entries(args.spec.env).map(([name, value]) => ({ name, value })),
               ...secretEnvs.map((s) => s.env),
             ],
-            startupProbe: { httpGet: { path: args.spec.healthPath }, periodSeconds: 2, failureThreshold: 30 },
+            startupProbe: {
+              httpGet: { path: args.spec.healthPath },
+              periodSeconds: 2,
+              failureThreshold: 30,
+            },
           },
         ],
       },

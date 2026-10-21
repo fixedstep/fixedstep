@@ -29,8 +29,7 @@ export function deployGcp(config: StageConfig): DeployOutputs {
   const region = gcpConfig.require("region");
 
   const apis = APIS.map(
-    (service) =>
-      new gcp.projects.Service(service, { project, service, disableOnDestroy: false }),
+    (service) => new gcp.projects.Service(service, { project, service, disableOnDestroy: false }),
   );
   const opts: pulumi.CustomResourceOptions = { dependsOn: apis };
 
@@ -39,7 +38,13 @@ export function deployGcp(config: StageConfig): DeployOutputs {
   const { secrets, dbPassword } = appSecrets();
   const db = createDatabase(
     config,
-    { region, tier: DB_TIER[stage], network: net.network, peering: net.peering, password: dbPassword },
+    {
+      region,
+      tier: DB_TIER[stage],
+      network: net.network,
+      peering: net.peering,
+      password: dbPassword,
+    },
     opts,
   );
 

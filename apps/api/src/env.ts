@@ -53,7 +53,10 @@ const Env = z
       return z.NEVER;
     }
     if (e.GRADER_MODE === "http" && !(e.GRADER_URL && e.GRADER_TOKEN)) {
-      ctx.addIssue({ code: "custom", message: "GRADER_URL and GRADER_TOKEN are required in http mode" });
+      ctx.addIssue({
+        code: "custom",
+        message: "GRADER_URL and GRADER_TOKEN are required in http mode",
+      });
       return z.NEVER;
     }
     if (e.EMAIL_PROVIDER === "smtp" && !(e.SMTP_URL && e.EMAIL_FROM)) {

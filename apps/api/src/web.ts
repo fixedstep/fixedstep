@@ -15,10 +15,7 @@ export function mountWeb(app: Hono<AppEnv>, root: string) {
       onFound: (_, c) => c.header("Cache-Control", "public, max-age=31536000, immutable"),
     }),
   );
-  app.use(
-    "*",
-    serveStatic({ root, onFound: (_, c) => c.header("Cache-Control", "no-cache") }),
-  );
+  app.use("*", serveStatic({ root, onFound: (_, c) => c.header("Cache-Control", "no-cache") }));
   // Extension-less paths are client-side routes: hand them to the SPA router.
   app.get("*", async (c, next) => {
     if (c.req.path.startsWith("/api/") || c.req.path.includes(".")) return next();
