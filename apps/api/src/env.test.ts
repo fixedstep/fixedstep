@@ -40,6 +40,17 @@ it("treats the subject prefix and Reply-To as optional, and empty as unset", () 
   expect(set.EMAIL_REPLY_TO).toBe("hi@x.test");
 });
 
+it("rejects an unknown EMAIL_PROVIDER", () => {
+  expect(() => loadEmailEnv({ EMAIL_PROVIDER: "sendgrid" })).toThrow();
+  expect(() => loadEnv({ ...base, EMAIL_PROVIDER: "sendgrid" })).toThrow();
+});
+
+it("loadEmailEnv treats empty prefix and Reply-To as unset", () => {
+  const env = loadEmailEnv({ EMAIL_SUBJECT_PREFIX: "", EMAIL_REPLY_TO: "" });
+  expect(env.EMAIL_SUBJECT_PREFIX).toBeUndefined();
+  expect(env.EMAIL_REPLY_TO).toBeUndefined();
+});
+
 it("loads only the email settings, without DB or auth vars", () => {
   const smtp = { EMAIL_PROVIDER: "smtp", SMTP_URL: "smtp://u:p@mail.test:587" };
   expect(loadEmailEnv({ ...smtp, EMAIL_FROM: "a@b.c" })).toMatchObject({

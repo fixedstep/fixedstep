@@ -46,6 +46,18 @@ it("adds Reply-To when configured", async () => {
   expect(sent[0]).toMatchObject({ from: "f@x.test", replyTo: "help@x.test", to: "a@b.c" });
 });
 
+it("omits Reply-To when it is an empty string", async () => {
+  const { sent, transport } = fakeTransport();
+  const provider = createSmtpProvider({
+    url: "smtp://x",
+    from: "f@x.test",
+    replyTo: "",
+    transport,
+  });
+  await provider.send(message);
+  expect(sent[0]).not.toHaveProperty("replyTo");
+});
+
 it("rejects when the transport does", async () => {
   const { transport } = fakeTransport(new Error("535 auth failed"));
   const provider = createSmtpProvider({ url: "smtp://x", from: "f@x.test", transport });

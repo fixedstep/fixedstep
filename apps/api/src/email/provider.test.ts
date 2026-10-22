@@ -26,4 +26,11 @@ it("returns the same provider without a prefix", () => {
   const { provider } = recorder();
   expect(withSubjectPrefix(provider)).toBe(provider);
   expect(withSubjectPrefix(provider, "")).toBe(provider);
+  expect(withSubjectPrefix(provider, "   ")).toBe(provider);
+});
+
+it("trims the prefix", async () => {
+  const { provider, sent } = recorder();
+  await withSubjectPrefix(provider, " [staging] ").send(message);
+  expect(sent[0]?.subject).toBe("[staging] Hello");
 });

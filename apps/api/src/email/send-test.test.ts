@@ -40,6 +40,51 @@ it("returns 1 when the provider rejects the message", async () => {
   expect(lines.join("\n")).toContain("535 auth failed");
 });
 
+it("does not print SMTP_URL when the provider's error message contains it", async () => {
+  const { lines, log } = sink();
+  const url = "smtp://secret-token:secret-token@mail.test:587";
+  const env = loadEmailEnv({ EMAIL_PROVIDER: "smtp", SMTP_URL: url, EMAIL_FROM: "f@x.test" });
+  const provider = {
+    name: "smtp",
+    send: () => Promise.reject(new Error(`connect failed for ${url}`)),
+  };
+  expect(await sendTestEmail("a@b.c", env, log, provider)).toBe(1);
+  expect(lines.join("\n")).not.toContain("secret-token");
+});
+
+it("masks the credentials of a reformatted URL in the provider's error", async () => {
+  const { lines, log } = sink();
+  const env = loadEmailEnv({
+    EMAIL_PROVIDER: "smtp",
+    SMTP_URL: "smtp://secret-token:secret-token@mail.test:587",
+    EMAIL_FROM: "f@x.test",
+  });
+  const provider = {
+    name: "smtp",
+    send: () => Promise.reject(new Error("bad login smtps://secret-token:secret-token@mail.test/")),
+  };
+  expect(await sendTestEmail("a@b.c", env, log, provider)).toBe(1);
+  const out = lines.join("\n");
+  expect(out).not.toContain("secret-token");
+  expect(out).toContain("smtps://***@mail.test/");
+});
+
+it("sends a message to the recipient with the test subject and sender in the body", async () => {
+  const { log } = sink();
+  const sent: { to: string; subject: string; text: string }[] = [];
+  const provider = {
+    name: "smtp",
+    send: async (m: { to: string; subject: string; text: string }) => {
+      sent.push(m);
+    },
+  };
+  const env = loadEmailEnv({ EMAIL_FROM: "f@x.test" });
+  expect(await sendTestEmail("a@b.c", env, log, provider)).toBe(0);
+  expect(sent[0]?.to).toBe("a@b.c");
+  expect(sent[0]?.subject).toBe("Fixedstep test email");
+  expect(sent[0]?.text).toContain("f@x.test");
+});
+
 it("never prints SMTP_URL", async () => {
   const { lines, log } = sink();
   const env = loadEmailEnv({

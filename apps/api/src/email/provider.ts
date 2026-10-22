@@ -17,9 +17,10 @@ export interface EmailProvider {
 
 /** Marks every subject, e.g. `[staging]`, so staging mail is never mistaken for prod's. */
 export function withSubjectPrefix(provider: EmailProvider, prefix?: string): EmailProvider {
-  if (!prefix) return provider;
+  const trimmed = prefix?.trim();
+  if (!trimmed) return provider;
   return {
     name: provider.name,
-    send: (message) => provider.send({ ...message, subject: `${prefix} ${message.subject}` }),
+    send: (message) => provider.send({ ...message, subject: `${trimmed} ${message.subject}` }),
   };
 }

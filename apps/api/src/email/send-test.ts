@@ -31,11 +31,18 @@ export async function sendTestEmail(
       html: `<p>Test email from Fixedstep, sent ${sentAt}.</p>`,
     });
   } catch (err) {
-    log.error(`[email] test send to ${to} failed:`, err instanceof Error ? err.message : err);
+    const message = err instanceof Error ? err.message : String(err);
+    log.error(`[email] test send to ${to} failed:`, redact(message, env.SMTP_URL));
     return 1;
   }
   log.log(`[email] test sent to ${to} via ${provider.name}`);
   return 0;
+}
+
+/** Hides credentials if a provider error echoes the connection URL, verbatim or reformatted. */
+function redact(message: string, smtpUrl?: string) {
+  const masked = smtpUrl ? message.replaceAll(smtpUrl, "<SMTP_URL>") : message;
+  return masked.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/\s@]*@/gi, "$1***@");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
