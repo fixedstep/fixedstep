@@ -81,16 +81,18 @@ stage gets its own key/project, and how the provider reports bounces and complai
       prod ~$15/mo) still needs verifying at sign-up (manual step 1).
 - [ ] Sending domains verified (SPF, DKIM, DMARC pass) for `staging.fixedstep.com` and
       `fixedstep.com`, and the records documented in `README.md`.
-      *Open:* records documented in README "Email setup (per stage)"; DNS creation and Postmark
-      verification are manual (steps 2–3), then fill in the dashboard values.
+      *Open:* records documented in README "Email setup (per stage)" (Cloudflare DNS, `pm_bounces`
+      Return-Path, Email Routing inbox). DKIM and Return-Path verified in Postmark for both
+      domains on 2026-10-22; confirm SPF/DKIM/DMARC `pass` in a delivered message's headers.
 - [ ] `SMTP_URL` and `emailFrom` set on the active staging and prod stacks. `pulumi up` prints no
       `SMTP_URL/emailFrom not set` warning (it's a Pulumi warning, not an API log line).
-      *Open:* manual (steps 4–5).
+      *Open:* set on `aws-staging` and `aws-prod` (committed yaml, plus `emailReplyTo`), and
+      `email:test` authenticated against Postmark. Tick once the CI deploys run without the warning.
 - [ ] Sign-up verification and password reset emails arrive in an inbox (not spam) on both
       staging and prod. Staging emails are clearly marked as staging.
       *Open:* the `[staging]` subject prefix is in code (`app-spec.ts` + `withSubjectPrefix`);
-      inbox checks are manual (step 6). The first real `email:test` run also confirms the
-      script's CLI entry guard, which has no unit test.
+      inbox checks are manual (step 6) and need Postmark's account approval for outside
+      addresses. The `email:test` run confirmed the script's CLI entry guard.
 - [x] No cloud SDK or cloud-specific email code in `apps/` or `infra/src/<cloud>/`. Both cloud
       targets get email from the same `app-spec.ts` path.
 - [x] `Pulumi.aws-*.yaml` `emailFrom` placement fixed.

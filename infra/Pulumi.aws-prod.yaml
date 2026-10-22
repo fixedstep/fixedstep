@@ -10,7 +10,6 @@ config:
       stage: prod
   aws:allowedAccountIds:
     - 817345470915
-  # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"
   fixedstep:budgetAlertEmail: fixedstep@proton.me
   fixedstep:GITHUB_CLIENT_ID:
     secure: v1:avYz8tRRciyg4wnq:SepPSa7sCazWMjyQdDKTzkmxR5xzzdSSI/4mEeBQ62u6pcTj
@@ -24,4 +23,8 @@ config:
     secure: v1:/821NrSkv3hHuJc9:GbBgZvxxiVJzLL++KrVhYilX0trXrzFiKN+Glt2jHmz5QSiucpZn2hXtwDmTaQ4XAqEyfA==
   fixedstep:POLAR_PRO_YEARLY_PRODUCT_ID:
     secure: v1:8ber2kNXT1BEuxXo:Q/6ON4RjKq9a4dhO0WBsnuPh+nG0w/PxG0EDkGUdDhXEVwl4cQeA8Yq0nAA/2rzHRrkLIw==
+  fixedstep:SMTP_URL:
+    secure: v1:x2iXh54Ow3l7SeFi:oTQb9FEWMCTyeP3zr+seijtkN0ALBXI/9E5F+ocH0gRWb8snVNegBjknNOwWQfwcisQIYJ8hLRje6Is1r/iRbEAUj5yrisp+/0gJTk+OGLhfUkJOYk9sev2+bnXvfLE4V5n7wtOXwxnNtz8jwrrfcvnf6HXq0u78Jg==
+  fixedstep:emailFrom: Fixedstep <noreply@fixedstep.com>
+  fixedstep:emailReplyTo: admin@fixedstep.com
 encryptionsalt: v1:FuqHJgJT3Ag=:v1:tAaO+vzFCyaieQkt:JORlEgXxaGe/mh6XJwUztKAuJhB9pQ==
