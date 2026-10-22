@@ -72,9 +72,10 @@ for c in \
   'NO_COLOR=1 FORCE_COLOR=0 node_modules/.bin/vitest run --configLoader runner' \
   "grep -n 'biome check --write .' CLAUDE.md" \
   'rg -n -- "--output=x|--fix" .claude' \
-  "sed -n -e '/end/p' apps/api/src/index.ts" \
-  "sed -n '/^export /p;/return/p' apps/api/src/index.ts" \
-  "sed --sandbox -n '1e touch x' f" \
+  "sed --sandbox -n -e '/end/p' apps/api/src/index.ts" \
+  "sed --sandbox -n '/^export /p;/return/p' apps/api/src/index.ts" \
+  "sed --sandbox -n '/-ignore /p' f" \
+  "git diff --stat && sed --sandbox -n '1,20p' f" \
   "echo 'a\$b' \"<(x)\"" \
   'sort -T /tmp -u f' \
   'node_modules/.bin/vitest run --configLoader runner 2>&1 | tail -40' \
@@ -84,7 +85,8 @@ for c in \
   'rg -n foo apps; ls tasks' \
   'find apps -name "*.test.ts" | wc -l' \
   'find apps -name "*.ts" -o -name "*.tsx" | sort -u' \
-  "sed -n '1,40p' apps/api/src/index.ts" \
+  "sed --sandbox -n '1,40p' apps/api/src/index.ts" \
+  'pnpm test' \
   'cat package.json | jq .scripts' \
   'git diff origin/main...HEAD 2>/dev/null || git diff main...HEAD' \
   'pnpm lint' \
@@ -112,10 +114,27 @@ for c in \
   'node_modules/.bin/biome format .' \
   'node_modules/.bin/tsc -p apps/api' \
   'node_modules/.bin/vitest run -u' \
+  'node_modules/.bin/vitest run --update' \
+  'pnpm test -u' \
+  'pnpm test --update' \
+  'pnpm test -- -u' \
+  'uniq a b' \
+  'sort f | uniq' \
   'node_modules/.bin/vitest' \
   "sed -i 's/a/b/' x.ts" \
   "sed -n -i 's/a/b/' x.ts" \
   "sed 's/a/b/' x.ts" \
+  "sed -n '1p' f" \
+  "sed -n '1,40p' apps/api/src/index.ts" \
+  "sed -n --sandbox '1p' f" \
+  "sed --sandbox '1p' f" \
+  "sed --sandbox -n -i 's/a/b/' x.ts" \
+  "sed --sandbox -n -si 's/a/b/' x.ts" \
+  "sed --sandbox -n -i~ '1p' x.ts" \
+  "sed --sandbox -n '-i.bak' '1p' x.ts" \
+  "sed --sandbox -n --in-place '1p' x.ts" \
+  "sed --sandbox -n --i '1p' x.ts" \
+  "sed --sandbox -n 1p x.ts -- -i" \
   'find . -name "*.tmp" -delete' \
   'find . -exec rm {} \;' \
   'sort -o out.txt in.txt' \
@@ -138,6 +157,14 @@ for c in \
   'cat <(touch x)' \
   'diff <(git show HEAD:a) a' \
   "sed -n '1e touch x' f" \
+  "sed -n '1e touch x --sandbox ' f" \
+  "sed -n '1e touch x' f -- --sandbox" \
+  "sed -n '1eid' f" \
+  "sed -n 's/a/b/wout.txt' f" \
+  "sed -n '1e\\ id' f" \
+  "git diff --stat && sed -n '1e id' f" \
+  "sed --sandbox -n '1p' f; sed -n '1e id' f" \
+  "sed --sandbox -n '1p' f | sed '1e id'" \
   "sed -n '\$e id' f" \
   "sed -n '1,5w out.txt' f" \
   "sed -n 's/a/b/e' f" \

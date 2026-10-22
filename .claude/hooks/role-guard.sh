@@ -67,7 +67,7 @@ guard_tester() {
 # --- reviewer: Bash allowlist ---------------------------------------------------------------
 
 ALLOWED_DESC='git diff/log/show/status/rev-parse/check-ignore/ls-files/merge-base, cd, pwd,
-echo, ls, cat, head, tail, wc, sort, uniq, diff, grep, rg, find, sed -n, jq,
+echo, ls, cat, head, tail, wc, sort, diff, grep, rg, find, sed --sandbox -n, jq,
 node_modules/.bin/{biome check, tsc --noEmit, vitest run}, pnpm lint/typecheck/test'
 
 # Splits $1 into command segments (one per line of the global `segments` array) on unquoted
@@ -195,6 +195,11 @@ check_segment() {
       # git diff/log/show --output (and its abbreviations); vitest --outputFile.
       [[ "$words" =~ [[:space:]](--out[A-Za-z-]*)([[:space:]=]) ]] &&
         block "'${BASH_REMATCH[1]}' writes a file; the reviewer is read-only."
+      ;;&
+    node_modules/.bin/vitest | pnpm)
+      # `pnpm test` forwards its args to vitest.
+      [[ "$words" =~ [[:space:]](-u|--update)[[:space:]] ]] &&
+        block "'${BASH_REMATCH[1]}' rewrites snapshots; the reviewer is read-only."
       ;;
   esac
 
@@ -216,25 +221,23 @@ check_segment() {
         block "rg --pre runs an arbitrary command; not allowed for the reviewer."
       return 0
       ;;
-    cd | pwd | echo | ls | cat | head | tail | wc | uniq | diff | grep | jq) return 0 ;;
+    cd | pwd | echo | ls | cat | head | tail | wc | diff | grep | jq) return 0 ;;
     find)
       [[ "$words" =~ [[:space:]](-delete|-exec|-execdir|-ok|-okdir|-fprint|-fprint0|-fprintf|-fls)[[:space:]] ]] &&
         block "find ${BASH_REMATCH[1]} is not allowed; the reviewer is read-only."
       return 0
       ;;
     sed)
-      [[ "$words" =~ [[:space:]](-[A-Za-z]*i[A-Za-z.]*|--in-place[^[:space:]]*)[[:space:]] ]] &&
+      # Only `sed --sandbox -n …`: GNU sed's sandbox mode itself rejects the e (run a command),
+      # w/W (write) and r/R (read) commands and the s///e, s///w flags, wherever they appear.
+      [[ "$seg" =~ ^sed[[:space:]]+--sandbox[[:space:]]+-n([[:space:]]|$) ]] ||
+        block "only 'sed --sandbox -n …' is allowed for the reviewer (or use the Read/Grep tools)."
+      # --sandbox doesn't stop -i/--in-place (any abbreviation, `--i…`); match with quotes and
+      # backslashes removed so `'-i~'` is caught too.
+      local unquoted="${words//[\'\"\\]/}"
+      [[ "$unquoted" =~ [[:space:]](-[A-Za-z]*i[^[:space:]]*|--i[^[:space:]]*)[[:space:]] ]] &&
         block "sed ${BASH_REMATCH[1]} edits files in place; the reviewer is read-only."
-      # GNU sed's e (run a command), w/W (write a file) and r/R (read a file) commands and the
-      # s///e and s///w flags. Rough token match: the letter after an address, `;`, `{`, `/`,
-      # quote or space, optionally after s/// flags, and followed by a space, `;`, `}`, quote
-      # or the end. It can false-positive on odd regex text; `sed --sandbox` skips the check
-      # (GNU sed then rejects those commands itself).
-      local sed_cmd_re="[0-9\$/,!;{}[:space:]'\"][gpIiMm0-9]*([ewWrR])([[:space:];}'\"]|$)"
-      if [[ ! "$words" =~ [[:space:]]--sandbox[[:space:]] && "$words" =~ $sed_cmd_re ]]; then
-        block "sed '${BASH_REMATCH[1]}' command runs, reads or writes files; use plain 'sed -n' printing (or --sandbox)."
-      fi
-      [[ "$seg" =~ ^sed[[:space:]]+(--sandbox[[:space:]]+)?-n([[:space:]]|$) ]] && return 0
+      return 0
       ;;
     git)
       [[ "$seg" =~ ^git[[:space:]]+(diff|log|show|status|rev-parse|check-ignore|ls-files|merge-base)([[:space:]]|$) ]] &&
@@ -249,8 +252,6 @@ check_segment() {
       block "tsc without --noEmit writes build output; use 'node_modules/.bin/tsc -p <pkg> --noEmit'."
       ;;
     node_modules/.bin/vitest)
-      [[ "$words" =~ [[:space:]](-u|--update)[[:space:]] ]] &&
-        block "vitest ${BASH_REMATCH[1]} rewrites snapshots; the reviewer is read-only."
       [[ "$seg" =~ ^node_modules/\.bin/vitest[[:space:]]+run([[:space:]]|$) ]] && return 0
       ;;
     pnpm)

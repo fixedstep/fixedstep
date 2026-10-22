@@ -265,7 +265,8 @@ Branch (a) applies. What the Claude Code docs say
 The reviewer allowlist splits commands on unquoted `&&`, `||`, `;`, `|`, `&` and newlines, and
 every segment must start with an allowed command: `git diff/log/show/status/rev-parse/
 check-ignore/ls-files/merge-base`, `cd`, `pwd`, `echo`, `ls`, `cat`, `head`, `tail`, `wc`,
-`sort`, `uniq`, `diff`, `grep`, `rg`, `find`, `sed -n`, `jq`, `node_modules/.bin/biome check`,
+`sort`, `diff`, `grep`, `rg`, `find`, `sed --sandbox -n` (sed only in that form, so GNU sed itself
+rejects `e`/`w`/`W`/`r`/`R` and `s///e`/`s///w`), `jq`, `node_modules/.bin/biome check`,
 `node_modules/.bin/tsc … --noEmit`, `node_modules/.bin/vitest run`, and `pnpm lint/typecheck/
 test`. It blocks:
 
@@ -273,9 +274,9 @@ test`. It blocks:
   substitution `<(…)`, and ANSI-C quoting `$'…'` (which its quote parser doesn't model);
 - leading `VAR=value` assignments other than `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM`, `LC_ALL`
   and `LANG` (so `GIT_PAGER`, `GIT_EXTERNAL_DIFF`, `GIT_CONFIG_*`, `LD_PRELOAD` are out);
-- `tee`, `sort -o/--output/--compress-program`, `sed -i`, sed scripts with an `e`, `w`, `W`,
-  `r` or `R` command or `s///e`/`s///w` flag (unless run with `--sandbox`),
-  `find -delete/-exec/-ok/-fprint*/-fls`, `rg --pre`, `vitest -u`;
+- `tee`, `sort -o/--output/--compress-program`, `sed -i`/`--in-place` in any spelling
+  (`--sandbox` doesn't block it), `find -delete/-exec/-ok/-fprint*/-fls`, `rg --pre`,
+  `-u`/`--update` for vitest and `pnpm` (which forwards it to vitest);
 - per command: `--write/--fix/--apply/--apply-unsafe` for biome (and `pnpm`, which forwards
   them), `--out…` for git and vitest (`--output`, `--outputFile`). Search text that merely
   contains those flags (`grep 'biome check --write'`) is allowed.
@@ -292,9 +293,9 @@ so a broken guard can't wedge an agent.
 ### Prompt-only (known gaps)
 
 - The guard is a check against mistakes, not a security boundary. The reviewer rules above
-  close the bypasses found in review, but string matching can't model everything a shell or an
-  allowed tool can do (e.g. options a tool reads from config files, or sed's token match, which
-  is heuristic and can also false-positive on unusual regex text).
+  cover the bypasses found in review so far, but string matching can't model everything a shell
+  or an allowed tool can do (e.g. options a tool reads from config files), and flag checks such
+  as sed's `-i` can false-positive on search text that looks like a flag.
 - The tester's Bash is unrestricted, so it could still write non-test files from the shell. Its
   prompt forbids that. If it turns out to matter, the reviewer allowlist could also be applied
   to the tester's `Bash` matcher.
@@ -314,4 +315,4 @@ user reviews the `diff -u` against `.claude/hooks/`, then installs them:
 ! install -m 755 <scratchpad>/role-guard.sh <scratchpad>/role-guard.test.sh .claude/hooks/
 ```
 
-The current version passes 118 cases.
+The current version passes 145 cases.
