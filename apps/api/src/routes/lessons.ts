@@ -125,6 +125,8 @@ export function lessonRoutes({ db, grader }: Deps) {
       } catch (e) {
         // Nothing was graded, so no submission row and no XP.
         if (e instanceof GraderBusyError) {
+          // Also what a wrong GRADER_URL or a down grader looks like, so keep the cause visible.
+          console.warn("[grader] busy:", e.message);
           return c.json({ error: "Grader is busy, try again in a moment" }, 503, {
             "retry-after": "5",
           });

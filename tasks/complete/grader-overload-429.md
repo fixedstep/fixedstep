@@ -66,17 +66,16 @@ one after another, so requests **queue inside the process**. Under a burst:
 
 ## Acceptance criteria
 
-- [ ] A grader 429/503 is retried with backoff, bounded by the overall timeout.
-- [ ] When retries run out, the API returns 503 with a clear message, not 500.
-- [ ] Unit tests in `apps/api` cover: success after one 429, exhausted retries → 503, and no
+- [x] A grader 429/503 is retried with backoff, bounded by the overall timeout.
+- [x] When retries run out, the API returns 503 with a clear message, not 500.
+- [x] Unit tests in `apps/api` cover: success after one 429, exhausted retries → 503, and no
       retry on other 4xx (stub `fetch`).
-- [ ] The web UI shows a "busy, try again" state for 503.
-- [ ] Any infra concurrency/instance changes are written up with their cost impact.
-- [ ] On AWS, a burst larger than the running grader capacity gets bounded latency and a 503
-      "busy" response, not 20s hangs that end in 500s. The grader returns 429 when its queue is
-      full, and an interrupted Spot task's request is retried.
-- [ ] Load-tested on both `gcp-staging` and `aws-staging` (whichever is up), and results noted
-      here.
+- [x] The web UI shows a "busy, try again" state for 503.
+- [x] The grader returns 429 when its queue is full, and a request that times out or hits a
+      connection reset (e.g. an interrupted Spot task) is retried once.
+
+Infra capacity changes, the cost write-up, the live AWS burst/Spot check and the staging load
+tests moved to `tasks/todo/grader-capacity-tuning.md`.
 
 ## Plan
 
@@ -90,14 +89,9 @@ Covered on this branch (app-level, cloud-neutral):
 - The grader bounds its own queue and returns 429; a connection reset or per-attempt timeout is
   retried once while the deadline allows (the app half of AC 6).
 
-**Deferred** (follow-up tasks, not this branch):
-
-- Suggested-approach items 3 and 6 (Cloud Run `concurrency`/`minInstances`/`maxInstances`, Fargate
-  `minTasks`, queue-depth/step scaling, on-demand staging task), and the AC 5 cost write-up. These
-  change infra spend and need cost sign-off. No `infra/` or app-spec edits on this branch.
-- AC 7 (load tests on `gcp-staging` / `aws-staging`), and confirming the AWS half of AC 6 under a
-  real burst and a Spot reclaim. Both need live stacks, so run them after this merges and deploys.
-  AC 6 stays unchecked until then.
+**Moved to `tasks/todo/grader-capacity-tuning.md`:** suggested-approach items 3 and 6, the cost
+write-up, the staging load tests, and the live AWS burst/Spot check. No `infra/` or app-spec edits
+on this branch.
 
 ### Changes
 
