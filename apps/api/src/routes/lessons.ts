@@ -12,6 +12,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { type AppEnv, clientKey, type Deps } from "../context";
 import { hasPro } from "../lib/entitlements";
+import { GraderBusyError } from "../lib/grader";
 import { completeLesson, getStats } from "../lib/progress";
 import { gradeQuiz } from "../lib/quiz";
 import { createRateLimiter } from "../lib/rate-limit";
@@ -114,12 +115,24 @@ export function lessonRoutes({ db, grader }: Deps) {
       if (!parsed.success || !("code" in parsed.data))
         return c.json({ error: "code required" }, 400);
       code = parsed.data.code;
-      grade = await grader({
-        code,
-        visibleTests: lesson.visibleTests ?? "",
-        hiddenTests: lesson.hiddenTests,
-        seed: Math.floor(Math.random() * 2 ** 31),
-      });
+      try {
+        grade = await grader({
+          code,
+          visibleTests: lesson.visibleTests ?? "",
+          hiddenTests: lesson.hiddenTests,
+          seed: Math.floor(Math.random() * 2 ** 31),
+        });
+      } catch (e) {
+        // Nothing was graded, so no submission row and no XP.
+        if (e instanceof GraderBusyError) {
+          // Also what a wrong GRADER_URL or a down grader looks like, so keep the cause visible.
+          console.warn("[grader] busy:", e.message);
+          return c.json({ error: "Grader is busy, try again in a moment" }, 503, {
+            "retry-after": "5",
+          });
+        }
+        throw e;
+      }
     }
 
     await db.insert(submissions).values({
