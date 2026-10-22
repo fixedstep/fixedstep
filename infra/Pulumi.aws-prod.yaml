@@ -8,4 +8,6 @@ config:
     tags:
       app: fixedstep
       stage: prod
+  aws:allowedAccountIds:
+    - 817345470915
   # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"

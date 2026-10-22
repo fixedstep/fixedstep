@@ -102,7 +102,7 @@ doesn't change between them:
 
 | | GCP (`infra/src/gcp/`) | AWS (`infra/src/aws/`) |
 |---|---|---|
-| Containers | Cloud Run (scales to zero) | ECS Fargate (at least one task each; Spot on staging) |
+| Containers | Cloud Run (scales to zero) | ECS Fargate (at least one task each; Spot on staging and for prod's grader) |
 | Public HTTPS | Cloud Run URL / domain mapping | API Gateway HTTP API → VPC link (no load balancer) |
 | API → grader | Internal-ingress Cloud Run URL | Cloud Map private DNS |
 | Postgres | Cloud SQL (private IP) | staging: Aurora Serverless v2 (pauses when idle); prod: RDS |
@@ -159,7 +159,9 @@ us-east-1 it allows just global services (IAM, billing, Route 53…).
    and `cd infra && pulumi login s3://<account-id>-fixedstep-pulumi-state`.
 3. `pnpm infra stack init aws-<stage>` (first time), then pin the account so the stack can never
    touch another one: `pnpm infra config set --path 'aws:allowedAccountIds[0]' <account-id> -s aws-<stage>`.
-4. Provider credentials (above). For staging, also pin `CONTENT_SYNC_TOKEN`
+4. Provider credentials (above), and `pnpm infra config set -s aws-<stage> budgetAlertEmail <address>`
+   for a monthly cost alert (the limit per stage is `budgetUsd` in `infra/src/aws/index.ts`). For
+   staging, also pin `CONTENT_SYNC_TOKEN`
    (`pnpm infra config set --secret -s aws-staging CONTENT_SYNC_TOKEN "$(openssl rand -hex 24)"`)
    so destroying and recreating staging doesn't change the content repo's token.
 5. `pnpm infra up -s aws-<stage>`. This creates the GitHub OIDC trust and deployer role CI uses
