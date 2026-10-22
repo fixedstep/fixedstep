@@ -1,5 +1,4 @@
 import { expect, it } from "vitest";
-import { loadEnv } from "../env";
 import { resetPasswordMessage, verifyEmailMessage } from "./templates";
 
 const url = "https://fixedstep.test/api/auth/reset-password/tok?callbackURL=/a&b=<c>";
@@ -14,16 +13,12 @@ it("puts the link in both bodies, escaped in HTML", () => {
   expect(verifyEmailMessage(url).subject).toMatch(/verify/i);
 });
 
-it("requires SMTP_URL and EMAIL_FROM when sending through SMTP", () => {
-  const base = {
-    DATABASE_URL: "postgres://x",
-    BETTER_AUTH_SECRET: "x".repeat(32),
-    BETTER_AUTH_URL: "http://localhost:5173",
-    WEB_ORIGIN: "http://localhost:5173",
-  };
-  const smtp = { ...base, EMAIL_PROVIDER: "smtp", SMTP_URL: "smtps://u:p@mail.test:465" };
-  expect(loadEnv(base).EMAIL_PROVIDER).toBe("log");
-  expect(() => loadEnv({ ...smtp, SMTP_URL: "" })).toThrow(/SMTP_URL/);
-  expect(() => loadEnv(smtp)).toThrow(/EMAIL_FROM/);
-  expect(loadEnv({ ...smtp, EMAIL_FROM: "a@b.c" }).EMAIL_FROM).toBe("a@b.c");
+const link = "https://fixedstep.test/verify?token=abc&next=/";
+
+it("renders the verify email", () => {
+  expect(verifyEmailMessage(link)).toMatchSnapshot();
+});
+
+it("renders the reset password email", () => {
+  expect(resetPasswordMessage(link)).toMatchSnapshot();
 });

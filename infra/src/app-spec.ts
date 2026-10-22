@@ -97,6 +97,7 @@ export function apiSpec(
   opts: { siteUrl: pulumi.Input<string>; graderUrl: pulumi.Input<string>; secrets: AppSecrets },
 ): ServiceSpec {
   const emailFrom = new pulumi.Config().get("emailFrom");
+  const emailReplyTo = new pulumi.Config().get("emailReplyTo");
   const smtp = Boolean(opts.secrets.SMTP_URL && emailFrom);
   if (!smtp) pulumi.log.warn("SMTP_URL/emailFrom not set; the API will log emails, not send them");
 
@@ -112,6 +113,9 @@ export function apiSpec(
       GRADER_URL: opts.graderUrl,
       POLAR_SERVER: config.stage === "prod" ? "production" : "sandbox",
       ...(smtp ? { EMAIL_PROVIDER: "smtp", EMAIL_FROM: emailFrom as string } : {}),
+      ...(smtp && emailReplyTo ? { EMAIL_REPLY_TO: emailReplyTo } : {}),
+      // Marks staging mail, which goes to real (tester) inboxes.
+      ...(config.stage === "staging" ? { EMAIL_SUBJECT_PREFIX: "[staging]" } : {}),
     },
     secrets: Object.keys(opts.secrets),
   };

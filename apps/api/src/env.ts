@@ -1,5 +1,27 @@
 import { z } from "zod";
 
+const emailFields = {
+  /** "log" prints emails (dev, or a stage without a mail provider yet). */
+  EMAIL_PROVIDER: z.enum(["log", "smtp"]).default("log"),
+  /**
+   * `smtp://user:pass@host:587` (STARTTLS) or `smtps://user:pass@host:465` from any provider
+   * (Postmark, SES, Resend, Mailgun...).
+   */
+  SMTP_URL: z.string().optional(),
+  /** Sender, e.g. `Fixedstep <noreply@fixedstep.com>`; must be on a domain the provider verified. */
+  EMAIL_FROM: z.string().optional(),
+  /** Prepended to every subject, e.g. `[staging]`. Set only on staging. */
+  EMAIL_SUBJECT_PREFIX: z.string().optional(),
+  /** Reply-To on outgoing email, e.g. an inbox someone reads. Unset: replies go to EMAIL_FROM. */
+  EMAIL_REPLY_TO: z.string().optional(),
+};
+
+function emailIssue(e: { EMAIL_PROVIDER: string; SMTP_URL?: string; EMAIL_FROM?: string }) {
+  if (e.EMAIL_PROVIDER === "smtp" && !(e.SMTP_URL && e.EMAIL_FROM)) {
+    return "SMTP_URL and EMAIL_FROM are required when EMAIL_PROVIDER=smtp";
+  }
+}
+
 const Env = z
   .object({
     PORT: z.coerce.number().default(3000),
@@ -35,12 +57,7 @@ const Env = z
     POLAR_PRO_MONTHLY_PRODUCT_ID: z.string().optional(),
     POLAR_PRO_YEARLY_PRODUCT_ID: z.string().optional(),
 
-    /** "log" prints emails (dev, or a stage without a mail provider yet). */
-    EMAIL_PROVIDER: z.enum(["log", "smtp"]).default("log"),
-    /** `smtps://user:pass@host:465` from any provider (SES, Postmark, Resend, Mailgun...). */
-    SMTP_URL: z.string().optional(),
-    /** Sender, e.g. `Fixedstep <noreply@fixedstep.com>`; must be on a domain the provider verified. */
-    EMAIL_FROM: z.string().optional(),
+    ...emailFields,
   })
   .transform((e, ctx) => {
     const databaseUrl =
@@ -59,11 +76,9 @@ const Env = z
       });
       return z.NEVER;
     }
-    if (e.EMAIL_PROVIDER === "smtp" && !(e.SMTP_URL && e.EMAIL_FROM)) {
-      ctx.addIssue({
-        code: "custom",
-        message: "SMTP_URL and EMAIL_FROM are required when EMAIL_PROVIDER=smtp",
-      });
+    const emailError = emailIssue(e);
+    if (emailError) {
+      ctx.addIssue({ code: "custom", message: emailError });
       return z.NEVER;
     }
     return { ...e, DATABASE_URL: databaseUrl };
@@ -71,8 +86,23 @@ const Env = z
 
 export type Env = z.infer<typeof Env>;
 
+/** Just the email settings, for tools (`email:test`) that run without the DB or auth vars. */
+const EmailEnv = z.object(emailFields).superRefine((e, ctx) => {
+  const emailError = emailIssue(e);
+  if (emailError) ctx.addIssue({ code: "custom", message: emailError });
+});
+
+export type EmailEnv = z.infer<typeof EmailEnv>;
+
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  // Treat empty strings (common in .env files) as unset.
-  const cleaned = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== ""));
-  return Env.parse(cleaned);
+  return Env.parse(withoutEmpty(source));
+}
+
+export function loadEmailEnv(source: NodeJS.ProcessEnv = process.env): EmailEnv {
+  return EmailEnv.parse(withoutEmpty(source));
+}
+
+/** Treat empty strings (common in .env files) as unset. */
+function withoutEmpty(source: NodeJS.ProcessEnv) {
+  return Object.fromEntries(Object.entries(source).filter(([, v]) => v !== ""));
 }
