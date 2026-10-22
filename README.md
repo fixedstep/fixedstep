@@ -162,10 +162,13 @@ Settings** page lists its exact records; create them in Cloudflare (`<domain>` i
 Cloudflare proxies new CNAMEs by default, and Postmark can't verify a proxied Return-Path. DMARC
 isn't a Postmark record. Staging gets its own so prod's policy can tighten separately.
 
-Postmark reviews new accounts by hand. Until the account is approved, it only delivers to
-addresses on its verified domains, so test with `admin@fixedstep.com` (or
-`test@blackhole.postmarkapp.com`, which shows in Activity but is dropped). Request approval from
-the account (Account Owner only).
+Postmark reviews new accounts by hand; request approval from the account (Account Owner only).
+Until then it accepts every message over SMTP but only delivers to the From address's own
+domain, so staging (`noreply@staging.fixedstep.com`) can't reach `admin@fixedstep.com`. To test
+staging before approval, add `staging.fixedstep.com` as a subdomain in Email Routing's settings
+(it adds that subdomain's MX and SPF records) with a rule such as `test@staging.fixedstep.com` →
+the team inbox, and sign up with that address. `test@blackhole.postmarkapp.com` also shows in
+Activity but is dropped.
 
 - **SPF:** with the custom Return-Path, SPF is checked on `pm_bounces.<domain>`, which Postmark
   covers, so the sending domain itself needs no SPF change. The only SPF record on
@@ -183,12 +186,13 @@ Commit the changed `Pulumi.<stack>.yaml` (the URL is stored encrypted). CI deplo
 yaml, so config that only exists locally is lost on the next deploy.
 
 ```
-pnpm infra config set --secret -s <stack> SMTP_URL 'smtp://<token>:<token>@smtp.postmarkapp.com:587'
+pnpm infra config set --secret -s <stack> SMTP_URL   # prompts; paste the URL below
 pnpm infra config set -s <stack> emailFrom "Fixedstep <noreply@<domain>>"
 pnpm infra config set -s <stack> emailReplyTo "<inbox someone reads>"   # optional
 ```
 
-`SMTP_URL` is `smtp://user:pass@host:587` (STARTTLS) or `smtps://user:pass@host:465` (TLS).
+For Postmark, `SMTP_URL` is `smtp://<token>:<token>@smtp.postmarkapp.com:587` (STARTTLS), with
+the real token in both places. Other providers may use `smtps://user:pass@host:465` (TLS).
 URL-encode the username and password if they contain `@`, `:`, `/` or `%`. Staging subjects are
 prefixed with `[staging]` (`EMAIL_SUBJECT_PREFIX`, set by `infra/src/app-spec.ts`).
 
@@ -196,6 +200,13 @@ To check a setup without signing up, export the stage's `SMTP_URL` and `EMAIL_FR
 `EMAIL_PROVIDER=smtp`) in a shell, or put them in `.env`, and run
 `pnpm --filter @fixedstep/api email:test you@example.com`. It sends one message and exits non-zero
 if the provider rejects it.
+
+On a deployed stage, the API logs `[email] smtp sent "<subject>"` when the provider accepts a
+message and `[email] smtp failed to send …` when it doesn't (on AWS:
+`aws logs tail /ecs/fixedstep-<stage>-api --region us-east-2 | grep '\[email\]'`). "Sent" means
+Postmark accepted it; whether it was delivered is in the Server's Activity. The logged subject
+is the template's, without the `[staging]` prefix that Activity and the inbox show, and logs
+never include the recipient address.
 
 Bounces and spam complaints show up in each Server's **Activity** page (Default Transactional
 Stream). Postmark suppresses hard-bounced and complaining addresses automatically; they're listed
