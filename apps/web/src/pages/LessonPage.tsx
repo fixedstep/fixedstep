@@ -17,6 +17,7 @@ import { ApiError, api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
 import { withUpgrade } from "../lib/redirect";
 import { runTestsInWorker } from "../lib/run-in-worker";
+import { submitErrorMessage } from "../lib/submit-error";
 import { PRICING } from "./home/content";
 
 export function LessonPage() {
@@ -126,7 +127,13 @@ function SubmitStatus({
       </p>
     );
   }
-  if (submit.isError) return <p className="error">Submission failed. Try again.</p>;
+  if (submit.isError) {
+    return (
+      <p className="error" role="status">
+        {submitErrorMessage(submit.error)}
+      </p>
+    );
+  }
   if (!submit.data?.completed) return null;
   return (
     <>

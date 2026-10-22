@@ -5,6 +5,7 @@ import { quickjsExecutor } from "@fixedstep/test-harness/quickjs";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
+import { createRunQueue } from "./queue";
 
 /**
  * Called only by the API (never exposed publicly). Deploy it with no credentials and no
@@ -20,6 +21,8 @@ export const GradeRequest = z.object({
 export type GraderOptions = {
   token: string;
   grade?: (req: z.infer<typeof GradeRequest>) => Promise<GradeResult>;
+  /** Requests allowed to wait behind the running one before we answer 429. */
+  maxQueued?: number;
 };
 
 function sameToken(header: string | undefined, token: string): boolean {
@@ -31,6 +34,8 @@ function sameToken(header: string | undefined, token: string): boolean {
 export function createGraderApp(opts: GraderOptions) {
   const execute = quickjsExecutor({ timeoutMs: 3_000, memoryBytes: 64 * 1024 * 1024 });
   const run = opts.grade ?? ((req) => grade(req, execute));
+  // One run at a time; overflow gets 429 so the API retries (or another instance takes it).
+  const queue = createRunQueue({ concurrency: 1, maxQueued: opts.maxQueued ?? 2 });
   const app = new Hono();
 
   app.get("/health", (c) => c.json({ ok: true }));
@@ -39,9 +44,15 @@ export function createGraderApp(opts: GraderOptions) {
     if (!sameToken(c.req.header("authorization"), opts.token)) {
       return c.json({ error: "unauthorized" }, 401);
     }
-    const parsed = GradeRequest.safeParse(await c.req.json().catch(() => null));
-    if (!parsed.success) return c.json({ error: "invalid request" }, 400);
-    return c.json(await run(parsed.data));
+    const release = queue.tryAcquire();
+    if (!release) return c.json({ error: "busy" }, 429);
+    try {
+      const parsed = GradeRequest.safeParse(await c.req.json().catch(() => null));
+      if (!parsed.success) return c.json({ error: "invalid request" }, 400);
+      return c.json(await queue.run(() => run(parsed.data)));
+    } finally {
+      release();
+    }
   });
 
   return app;
