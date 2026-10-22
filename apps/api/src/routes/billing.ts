@@ -1,4 +1,4 @@
-import { billingEvents } from "@fixedstep/db";
+import { billingEvents, user } from "@fixedstep/db";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { WebhookVerificationError } from "../billing/polar";
@@ -58,28 +58,47 @@ export function billingRoutes({ db, billing, env }: Deps) {
       throw e;
     }
 
-    // Idempotency: providers retry, so each event id is processed once.
-    const inserted = await db
-      .insert(billingEvents)
-      .values({
-        id: event.eventId,
-        provider: billing.name,
-        type: event.rawType,
-        payload: JSON.parse(raw),
-      })
-      .onConflictDoNothing()
-      .returning({ id: billingEvents.id });
-    if (inserted.length === 0) return c.json({ ok: true, duplicate: true });
+    // Idempotency: providers retry, so each event id is processed once. Recording the event and
+    // applying it share a transaction: if applying throws, the event row rolls back too and the
+    // provider's retry processes it again instead of being skipped as a duplicate.
+    const result = await db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(billingEvents)
+        .values({
+          id: event.eventId,
+          provider: billing.name,
+          type: event.rawType,
+          payload: JSON.parse(raw),
+        })
+        .onConflictDoNothing()
+        .returning({ id: billingEvents.id });
+      if (inserted.length === 0) return { duplicate: true };
 
-    let stale = false;
-    if (event.type === "subscription") {
-      stale = !(await applySubscriptionUpdate(db, billing.name, event));
-    }
-    await db
-      .update(billingEvents)
-      .set({ processedAt: new Date() })
-      .where(eq(billingEvents.id, event.eventId));
-    return c.json({ ok: true, ...(stale && { stale: true }) });
+      let outcome = {};
+      if (event.type === "subscription") {
+        // No such user: a customer from another environment sharing the provider account, or a
+        // user deleted since checkout. Retrying can't fix that, so record the event and move on.
+        const [found] = await tx
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.id, event.userId))
+          .limit(1);
+        if (!found) {
+          console.warn(
+            `[billing] ${event.rawType} ${event.eventId} for unknown user ${event.userId}; ignored`,
+          );
+          outcome = { unknownUser: true };
+        } else if (!(await applySubscriptionUpdate(tx, billing.name, event))) {
+          outcome = { stale: true };
+        }
+      }
+      await tx
+        .update(billingEvents)
+        .set({ processedAt: new Date() })
+        .where(eq(billingEvents.id, event.eventId));
+      return outcome;
+    });
+    return c.json({ ok: true, ...result });
   });
 
   return r;

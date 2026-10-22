@@ -62,8 +62,8 @@ export const STAGE_CONFIG: Record<Stage, StageConfig> = {
   prod: {
     stage: "prod",
     // www, not the apex: a CNAME can't sit on the apex. Redirect fixedstep.com → www at the DNS
-    // provider. Uncomment once prod's DNS is ready.
-    // domain: "www.fixedstep.com",
+    // provider.
+    domain: "www.fixedstep.com",
     api: { cpu: 1, memoryMiB: 1024, minInstances: 1, maxInstances: 4 },
     grader: { cpu: 1, memoryMiB: 512, maxInstances: 20 },
     db: {
