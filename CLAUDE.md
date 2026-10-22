@@ -13,6 +13,10 @@
   `infra/src/app-spec.ts`. Stacks are `<cloud>-<stage>` (`gcp-staging`, `aws-prod`, …); keep the
   GCP and AWS targets in step when the app spec changes. Naming: `resourceName(stage, x)` →
   `fixedstep-<stage>-x`.
+- Git flow: one feature branch per task (named after its `tasks/` slug), squash-merged to `main`
+  via PR, never committed to directly. A PR needs a `reviewer` agent `VERDICT: APPROVE` on its
+  current head SHA before merge. The `/ship-task` skill runs designer → implementer → tester →
+  reviewer (agents in `.claude/agents/`).
 - Course content is private; only `content-sample/` lives here. `CONTENT_DIR` points the
   `content:*` scripts (and the compose `/content` mount) at the private repo; the content repo
   skeleton is `packages/content-cli/template/` (dotfiles stored as `_name`), used by `init`.

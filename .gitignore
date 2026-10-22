@@ -7,7 +7,9 @@ dist/
 .DS_Store
 coverage/
 .cache/
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/skills/
 CLAUDE.local.md
 .bash_profile
 .bashrc
