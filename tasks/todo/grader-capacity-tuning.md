@@ -53,7 +53,8 @@ Measure first (see "Load test"), then pick the cheapest change that removes the 
 
 Write this up before applying anything to prod. For each option, give the monthly delta per
 stage. Use the GCP/AWS pricing calculators with the region in use (AWS is us-east-2), and check
-the result against `budgetUsd` in `AWS_STAGE` (staging 30, prod 50) and the GCP budget alert.
+the result against `budgetUsd` in `AWS_STAGE` (staging 30, prod 50). GCP has no budget alert in
+infra yet; check the billing account's budget, or add one in `infra/src/gcp/` as part of this task.
 The always-on options (2, and the on-demand/`minTasks` parts of 5) are the ones that move the
 bill.
 
