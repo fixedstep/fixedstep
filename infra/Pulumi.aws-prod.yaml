@@ -10,4 +10,6 @@ config:
       stage: prod
   aws:allowedAccountIds:
     - 817345470915
-  # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"
+    # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"
+  fixedstep:budgetAlertEmail: fixedstep@proton.me
+encryptionsalt: v1:FuqHJgJT3Ag=:v1:tAaO+vzFCyaieQkt:JORlEgXxaGe/mh6XJwUztKAuJhB9pQ==
