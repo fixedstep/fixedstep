@@ -2,6 +2,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { apiSpec, appSecrets, type DeployOutputs, graderSpec } from "../app-spec";
 import { APP, resourceName, type Stage, type StageConfig } from "../config";
+import { createBudget } from "./budget";
 import { createGithubDeployer } from "./ci";
 import { type AwsDb, createDatabase } from "./database";
 import { createIngress } from "./ingress";
@@ -9,25 +10,31 @@ import { createNetwork } from "./network";
 import { createOpsTask } from "./ops";
 import { fargateService } from "./service";
 
-type TaskSize = { cpu: number; memoryMiB: number };
+/** Fargate CPU units and MiB, and whether the service runs on Fargate Spot. */
+type TaskSize = { cpu: number; memoryMiB: number; spot: boolean };
 
 /**
  * AWS-only sizing; everything else comes from the cloud-neutral StageConfig. Fargate can't scale
  * to zero, so each service keeps at least one task running. Staging is tuned for cost (Spot, the
  * smallest tasks, a database that pauses when idle) and is meant to be destroyed when unused.
+ * Prod is sized for pre-revenue traffic: the smallest tasks (autoscaling covers bursts), and the
+ * stateless grader on Spot, where a reclaimed task fails only the submission it was running.
+ * Grow the API to 512/1024 and take the grader off Spot once there's revenue.
  */
-const AWS_STAGE: Record<Stage, { spot: boolean; api: TaskSize; grader: TaskSize; db: AwsDb }> = {
+type AwsStage = { api: TaskSize; grader: TaskSize; db: AwsDb; budgetUsd: number };
+
+const AWS_STAGE: Record<Stage, AwsStage> = {
   staging: {
-    spot: true,
-    api: { cpu: 256, memoryMiB: 512 },
-    grader: { cpu: 256, memoryMiB: 512 },
+    api: { cpu: 256, memoryMiB: 512, spot: true },
+    grader: { cpu: 256, memoryMiB: 512, spot: true },
     db: { kind: "aurora-serverless", maxAcu: 2, pauseAfterSeconds: 900 },
+    budgetUsd: 30,
   },
   prod: {
-    spot: false,
-    api: { cpu: 512, memoryMiB: 1024 },
-    grader: { cpu: 512, memoryMiB: 1024 },
+    api: { cpu: 256, memoryMiB: 512, spot: false },
+    grader: { cpu: 256, memoryMiB: 512, spot: true },
     db: { kind: "rds", instanceClass: "db.t4g.micro" },
+    budgetUsd: 50,
   },
 };
 
@@ -37,6 +44,7 @@ export function deployAws(config: StageConfig): DeployOutputs {
   const opts: pulumi.CustomResourceOptions = {};
 
   const deployer = createGithubDeployer(stage, opts);
+  createBudget(stage, sizing.budgetUsd, opts);
   const net = createNetwork(stage, opts);
   const { secrets, dbPassword } = appSecrets();
   const db = createDatabase(
@@ -75,7 +83,6 @@ export function deployAws(config: StageConfig): DeployOutputs {
     capacityProviders,
     namespaceId: namespace.id,
     subnetIds: net.publicSubnetIds,
-    spot: sizing.spot,
   };
 
   const grader = fargateService(
