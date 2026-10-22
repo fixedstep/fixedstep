@@ -64,3 +64,38 @@ it("answers 429 once the queue is full, and frees slots when runs finish", async
 
   expect((await send(req)).status).toBe(200);
 });
+
+const authed = {
+  "content-type": "application/json",
+  authorization: `Bearer ${token}`,
+};
+
+it("frees its slot when grading throws", async () => {
+  let calls = 0;
+  const flaky = createGraderApp({
+    token,
+    maxQueued: 0,
+    grade: async () => {
+      if (calls++ < 3) throw new Error("boom");
+      return result;
+    },
+  });
+  const send = () =>
+    flaky.request("/grade", { method: "POST", headers: authed, body: JSON.stringify(req) });
+  for (let i = 0; i < 3; i++) expect((await send()).status).toBe(500);
+  expect((await send()).status).toBe(200);
+});
+
+it("does not take a slot for unauthorized requests", async () => {
+  const tiny = createGraderApp({ token, maxQueued: 0, grade: async () => result });
+  for (let i = 0; i < 3; i++) {
+    const res = await tiny.request("/grade", { method: "POST", body: "{}" });
+    expect(res.status).toBe(401);
+  }
+  const ok = await tiny.request("/grade", {
+    method: "POST",
+    headers: authed,
+    body: JSON.stringify(req),
+  });
+  expect(ok.status).toBe(200);
+});

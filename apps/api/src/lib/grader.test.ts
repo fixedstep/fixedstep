@@ -92,3 +92,71 @@ it("backs off with jitter between attempts", async () => {
     expect(second).toBeLessThanOrEqual(1000);
   }
 });
+
+// Like real fetch: rejects at once if the signal is already aborted.
+const hangUntilAbort: typeof fetch = (_url, init) =>
+  new Promise((_resolve, reject) => {
+    const signal = init?.signal as AbortSignal;
+    if (signal.aborted) return reject(signal.reason);
+    signal.addEventListener("abort", () => reject(signal.reason));
+  });
+
+it("gives up without sleeping when the backoff will not fit in the deadline", async () => {
+  fetchMock.mockImplementation(async () => reply(429));
+  // First backoff is >= 125ms, which exceeds the 100ms budget.
+  await expect(grader({ deadlineMs: 100 })(req)).rejects.toBeInstanceOf(GraderBusyError);
+  expect(sleep).not.toHaveBeenCalled();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("throws GraderBusyError when the deadline passes during a backoff", async () => {
+  fetchMock.mockResolvedValueOnce(reply(503)).mockImplementation(hangUntilAbort);
+  sleep.mockImplementation((ms) => new Promise((r) => setTimeout(r, ms + 100)));
+  await expect(grader({ deadlineMs: 200 })(req)).rejects.toBeInstanceOf(GraderBusyError);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it("maps a deadline hit while reading the response body to GraderBusyError", async () => {
+  fetchMock.mockImplementation(async (_url, init) => {
+    const res = new Response("{}", { status: 200 });
+    vi.spyOn(res, "json").mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
+    );
+    return res;
+  });
+  await expect(grader({ deadlineMs: 50 })(req)).rejects.toBeInstanceOf(GraderBusyError);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("retries once when a single attempt times out but the deadline remains", async () => {
+  fetchMock.mockImplementationOnce(hangUntilAbort).mockResolvedValueOnce(reply(200, result));
+  await expect(grader({ attemptTimeoutMs: 20, deadlineMs: 5_000 })(req)).resolves.toEqual(result);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it("gives up after a second attempt timeout", async () => {
+  fetchMock.mockImplementation(hangUntilAbort);
+  await expect(grader({ attemptTimeoutMs: 20, deadlineMs: 5_000 })(req)).rejects.toBeInstanceOf(
+    GraderBusyError,
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it("does not retry a 500", async () => {
+  fetchMock.mockResolvedValueOnce(reply(500));
+  const err = await grader()(req).catch((e) => e);
+  expect(err).not.toBeInstanceOf(GraderBusyError);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("succeeds on the last attempt after a 429 and a 503", async () => {
+  fetchMock
+    .mockResolvedValueOnce(reply(429))
+    .mockResolvedValueOnce(reply(503))
+    .mockResolvedValueOnce(reply(200, result));
+  await expect(grader()(req)).resolves.toEqual(result);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});

@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { serializeBundle } from "@fixedstep/content-cli/bundle";
 import { loadContent } from "@fixedstep/content-cli/load";
-import { lessons, submissions, user } from "@fixedstep/db";
+import { lessons, submissions, user, xpEvents } from "@fixedstep/db";
 import { createTestDb } from "@fixedstep/db/testing";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -70,6 +70,7 @@ it("answers 503 and records nothing when the grader is busy", async () => {
   expect(res.headers.get("retry-after")).toBe("5");
   expect(await res.json()).toEqual({ error: expect.stringMatching(/busy/) });
   expect(await submissionCount()).toBe(0);
+  expect(await db.select().from(xpEvents).where(eq(xpEvents.userId, "u1"))).toHaveLength(0);
 });
 
 it("lets other grader errors propagate", async () => {
