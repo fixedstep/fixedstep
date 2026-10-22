@@ -4,8 +4,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { createPolarProvider } from "./billing/polar";
-import { createLogProvider } from "./email/log";
-import { createSmtpProvider } from "./email/smtp";
+import { createEmailProvider } from "./email";
 import { loadEnv } from "./env";
 import { createGrader } from "./lib/grader";
 import { deleteStaleGuests } from "./lib/guests";
@@ -17,10 +16,7 @@ if (env.RUN_MIGRATIONS) {
 }
 
 const db = createDb(env.DATABASE_URL);
-const email =
-  env.EMAIL_PROVIDER === "smtp"
-    ? createSmtpProvider({ url: env.SMTP_URL as string, from: env.EMAIL_FROM as string })
-    : createLogProvider();
+const email = createEmailProvider(env);
 const app = createApp({
   env,
   db,

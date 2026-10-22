@@ -10,7 +10,7 @@ config:
       stage: prod
   aws:allowedAccountIds:
     - 817345470915
-    # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"
+  # fixedstep:emailFrom: "Fixedstep <noreply@fixedstep.com>"
   fixedstep:budgetAlertEmail: fixedstep@proton.me
   fixedstep:GITHUB_CLIENT_ID:
     secure: v1:avYz8tRRciyg4wnq:SepPSa7sCazWMjyQdDKTzkmxR5xzzdSSI/4mEeBQ62u6pcTj

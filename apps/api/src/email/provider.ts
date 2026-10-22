@@ -14,3 +14,13 @@ export interface EmailProvider {
   /** Resolves once the provider has accepted the message. Throws if it was rejected. */
   send(message: EmailMessage): Promise<void>;
 }
+
+/** Marks every subject, e.g. `[staging]`, so staging mail is never mistaken for prod's. */
+export function withSubjectPrefix(provider: EmailProvider, prefix?: string): EmailProvider {
+  const trimmed = prefix?.trim();
+  if (!trimmed) return provider;
+  return {
+    name: provider.name,
+    send: (message) => provider.send({ ...message, subject: `${trimmed} ${message.subject}` }),
+  };
+}

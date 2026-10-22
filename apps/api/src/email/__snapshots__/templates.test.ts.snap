@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renders the reset password email 1`] = `
+{
+  "html": "<p>Someone asked to reset the password for your Fixedstep account.</p>
+<p><a href="https://fixedstep.test/verify?token=abc&amp;next=/">Choose a new password</a></p>
+<p style="color:#666;font-size:13px">Or paste this link into your browser:<br>https://fixedstep.test/verify?token=abc&amp;next=/</p>
+<p style="color:#666;font-size:13px">The link expires in an hour. If you didn&#39;t ask for this, you can ignore this email.</p>",
+  "subject": "Reset your Fixedstep password",
+  "text": "Someone asked to reset the password for your Fixedstep account.
+
+Choose a new password: https://fixedstep.test/verify?token=abc&next=/
+
+The link expires in an hour. If you didn't ask for this, you can ignore this email.
+",
+}
+`;
+
+exports[`renders the verify email 1`] = `
+{
+  "html": "<p>Confirm your email address to finish setting up your Fixedstep account.</p>
+<p><a href="https://fixedstep.test/verify?token=abc&amp;next=/">Verify email</a></p>
+<p style="color:#666;font-size:13px">Or paste this link into your browser:<br>https://fixedstep.test/verify?token=abc&amp;next=/</p>
+<p style="color:#666;font-size:13px">If you didn&#39;t create an account, you can ignore this email.</p>",
+  "subject": "Verify your Fixedstep email",
+  "text": "Confirm your email address to finish setting up your Fixedstep account.
+
+Verify email: https://fixedstep.test/verify?token=abc&next=/
+
+If you didn't create an account, you can ignore this email.
+",
+}
+`;

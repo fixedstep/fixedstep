@@ -129,6 +129,61 @@ running `up` rolls out new containers. The generated secrets (`BETTER_AUTH_SECRE
 `GRADER_TOKEN`, `CONTENT_SYNC_TOKEN`, `DB_PASSWORD`) can be pinned the same way. A migration
 does that, so logins and the content repo's token survive it (see below).
 
+### Email setup (per stage)
+
+Email goes through [Postmark](https://postmarkapp.com) over plain SMTP, so it works the same
+whichever cloud runs a stage. Until `SMTP_URL` and `emailFrom` are both set on a stack, `up` warns
+`SMTP_URL/emailFrom not set` and the API only logs emails.
+
+Each stage has its own sending domain and its own Postmark **Server** (one account), so staging
+can't hurt prod's sender reputation and each has its own token:
+
+| Stage | Postmark Server | Sending domain | `emailFrom` |
+|---|---|---|---|
+| staging | `fixedstep-staging` | `staging.fixedstep.com` | `Fixedstep <noreply@staging.fixedstep.com>` |
+| prod | `fixedstep-prod` | `fixedstep.com` | `Fixedstep <noreply@fixedstep.com>` |
+
+Add both domains under **Sender Signatures → Domains** and create these records at the DNS
+provider for each (`<domain>` is `staging.fixedstep.com` or `fixedstep.com`). New Postmark
+accounts can only send to outside addresses after Postmark approves the account, so request that
+from the dashboard too.
+
+| Purpose | Type | Name | Value |
+|---|---|---|---|
+| DKIM | TXT | `<selector>._domainkey.<domain>` | `k=rsa; p=…`. Copy the name and value from the Postmark dashboard (DNS settings for the domain). |
+| Return-Path (bounces; SPF passes here) | CNAME | `pm-bounces.<domain>` | `pm.mtasv.net` |
+| DMARC | TXT | `_dmarc.<domain>` | `v=DMARC1; p=none; rua=mailto:<reporting address>` |
+
+- **SPF:** with the custom Return-Path, SPF is checked on `pm-bounces.<domain>`, which Postmark
+  covers, so the sending domain itself needs no SPF change (confirm in Postmark's DNS
+  instructions). If a domain ever does need an SPF include, a name can have only one SPF record:
+  merge into an existing `v=spf1 …` record rather than adding a second.
+- **DMARC:** start at `p=none` and read the reports. Once SPF and DKIM pass consistently, move to
+  `p=quarantine`.
+- Wait for Postmark to show DKIM and Return-Path as verified before setting the stack config.
+
+Stack config, for each active stack. Use the stage's Server API token (Server → API Tokens) as
+both the SMTP username and password, on port 587 with STARTTLS:
+
+```
+pnpm infra config set --secret -s <stack> SMTP_URL 'smtp://<token>:<token>@smtp.postmarkapp.com:587'
+pnpm infra config set -s <stack> emailFrom "Fixedstep <noreply@<domain>>"
+pnpm infra config set -s <stack> emailReplyTo "<inbox someone reads>"   # optional
+```
+
+`SMTP_URL` is `smtp://user:pass@host:587` (STARTTLS) or `smtps://user:pass@host:465` (TLS).
+URL-encode the username and password if they contain `@`, `:`, `/` or `%`. Staging subjects are
+prefixed with `[staging]` (`EMAIL_SUBJECT_PREFIX`, set by `infra/src/app-spec.ts`).
+
+To check a setup without signing up, export the stage's `SMTP_URL` and `EMAIL_FROM` (with
+`EMAIL_PROVIDER=smtp`) in a shell, or put them in `.env`, and run
+`pnpm --filter @fixedstep/api email:test you@example.com`. It sends one message and exits non-zero
+if the provider rejects it.
+
+Bounces and spam complaints show up in each Server's **Activity** page (Default Transactional
+Stream). Postmark suppresses hard-bounced and complaining addresses automatically; they're listed
+under the stream's **Suppressions**.
+
 ### GCP setup (per stage, as a project owner)
 
 1. Create the project with billing enabled, then
