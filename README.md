@@ -143,27 +143,44 @@ can't hurt prod's sender reputation and each has its own token:
 | staging | `fixedstep-staging` | `staging.fixedstep.com` | `Fixedstep <noreply@staging.fixedstep.com>` |
 | prod | `fixedstep-prod` | `fixedstep.com` | `Fixedstep <noreply@fixedstep.com>` |
 
-Add both domains under **Sender Signatures → Domains** and create these records at the DNS
-provider for each (`<domain>` is `staging.fixedstep.com` or `fixedstep.com`). New Postmark
-accounts can only send to outside addresses after Postmark approves the account, so request that
-from the dashboard too.
+Postmark won't accept a free-mail address (Gmail, Proton…) at sign-up, so the account uses
+`admin@fixedstep.com`. The domain's DNS is on Cloudflare, and **Email Routing** (free) forwards
+`admin@` and `dmarc@fixedstep.com` to the team inbox. Enabling it adds Cloudflare's MX records
+and an SPF record on `fixedstep.com`. Mail to any other address on the domain is dropped.
+
+Add both domains at the account level under **Sender Signatures** (not inside a Server) as
+domains, not single-address signatures, so every address on them can send. Each domain's **DNS
+Settings** page lists its exact records; create them in Cloudflare (`<domain>` is
+`staging.fixedstep.com` or `fixedstep.com`):
 
 | Purpose | Type | Name | Value |
 |---|---|---|---|
-| DKIM | TXT | `<selector>._domainkey.<domain>` | `k=rsa; p=…`. Copy the name and value from the Postmark dashboard (DNS settings for the domain). |
-| Return-Path (bounces; SPF passes here) | CNAME | `pm-bounces.<domain>` | `pm.mtasv.net` |
-| DMARC | TXT | `_dmarc.<domain>` | `v=DMARC1; p=none; rua=mailto:<reporting address>` |
+| DKIM | TXT | `<selector>._domainkey.<domain>` | `k=rsa; p=…`. Copy the name and value from the domain's DNS Settings. |
+| Return-Path (bounces; SPF passes here) | CNAME | `pm_bounces.<domain>` (Postmark's default) | `pm.mtasv.net`, **DNS only** (grey cloud) |
+| DMARC | TXT | `_dmarc.<domain>` | `v=DMARC1; p=none; rua=mailto:dmarc@fixedstep.com` |
 
-- **SPF:** with the custom Return-Path, SPF is checked on `pm-bounces.<domain>`, which Postmark
-  covers, so the sending domain itself needs no SPF change (confirm in Postmark's DNS
-  instructions). If a domain ever does need an SPF include, a name can have only one SPF record:
-  merge into an existing `v=spf1 …` record rather than adding a second.
+Cloudflare proxies new CNAMEs by default, and Postmark can't verify a proxied Return-Path. DMARC
+isn't a Postmark record. Staging gets its own so prod's policy can tighten separately.
+
+Postmark reviews new accounts by hand. Until the account is approved, it only delivers to
+addresses on its verified domains, so test with `admin@fixedstep.com` (or
+`test@blackhole.postmarkapp.com`, which shows in Activity but is dropped). Request approval from
+the account (Account Owner only).
+
+- **SPF:** with the custom Return-Path, SPF is checked on `pm_bounces.<domain>`, which Postmark
+  covers, so the sending domain itself needs no SPF change. The only SPF record on
+  `fixedstep.com` is Cloudflare Email Routing's. A name can have only one SPF record: if a
+  domain ever needs another include, merge it into the existing `v=spf1 …` record.
 - **DMARC:** start at `p=none` and read the reports. Once SPF and DKIM pass consistently, move to
   `p=quarantine`.
 - Wait for Postmark to show DKIM and Return-Path as verified before setting the stack config.
 
-Stack config, for each active stack. Use the stage's Server API token (Server → API Tokens) as
-both the SMTP username and password, on port 587 with STARTTLS:
+Stack config, for each active stack. Use the stage's **Server** API token (Servers → the stage's
+Server → API Tokens; the Account token can't send) as both the SMTP username and password, on
+port 587 with STARTTLS (Postmark has no 465). Run these in a terminal of your own: leaving the
+value off `SMTP_URL` makes Pulumi prompt for it, which keeps the token out of shell history.
+Commit the changed `Pulumi.<stack>.yaml` (the URL is stored encrypted). CI deploys from `main`'s
+yaml, so config that only exists locally is lost on the next deploy.
 
 ```
 pnpm infra config set --secret -s <stack> SMTP_URL 'smtp://<token>:<token>@smtp.postmarkapp.com:587'
