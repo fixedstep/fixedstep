@@ -39,10 +39,32 @@ export async function sendTestEmail(
   return 0;
 }
 
-/** Hides credentials if a provider error echoes the connection URL, verbatim or reformatted. */
+/**
+ * Hides credentials if a provider error echoes them: the whole connection URL, any URL's
+ * `user:pass@`, and SMTP_URL's username and password on their own (raw and decoded).
+ */
 function redact(message: string, smtpUrl?: string) {
-  const masked = smtpUrl ? message.replaceAll(smtpUrl, "<SMTP_URL>") : message;
-  return masked.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/\s@]*@/gi, "$1***@");
+  let masked = smtpUrl ? message.replaceAll(smtpUrl, "<SMTP_URL>") : message;
+  masked = masked.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/\s@]*@/gi, "$1***@");
+  // Longest first, so a secret that contains another is masked whole.
+  const secrets = credentials(smtpUrl).sort((a, b) => b.length - a.length);
+  for (const secret of secrets) masked = masked.replaceAll(secret, "***");
+  return masked;
+}
+
+function credentials(smtpUrl?: string): string[] {
+  if (!smtpUrl || !URL.canParse(smtpUrl)) return [];
+  const { username, password } = new URL(smtpUrl);
+  const raw = [username, password];
+  return [...raw, ...raw.map(safeDecode)].filter((s) => s !== "");
+}
+
+function safeDecode(s: string) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

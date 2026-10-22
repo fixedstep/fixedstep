@@ -69,6 +69,40 @@ it("masks the credentials of a reformatted URL in the provider's error", async (
   expect(out).toContain("smtps://***@mail.test/");
 });
 
+it("masks the token when the provider's error contains it on its own", async () => {
+  const { lines, log } = sink();
+  const env = loadEmailEnv({
+    EMAIL_PROVIDER: "smtp",
+    SMTP_URL: "smtp://secret-token:secret-token@mail.test:587",
+    EMAIL_FROM: "f@x.test",
+  });
+  const provider = {
+    name: "smtp",
+    send: () => Promise.reject(new Error("535 invalid token secret-token")),
+  };
+  expect(await sendTestEmail("a@b.c", env, log, provider)).toBe(1);
+  const out = lines.join("\n");
+  expect(out).not.toContain("secret-token");
+  expect(out).toContain("535 invalid token ***");
+});
+
+it("masks a URL-encoded password in both its encoded and decoded forms", async () => {
+  const { lines, log } = sink();
+  const env = loadEmailEnv({
+    EMAIL_PROVIDER: "smtp",
+    SMTP_URL: "smtp://user:pa%2Bss@mail.test:587",
+    EMAIL_FROM: "f@x.test",
+  });
+  const provider = {
+    name: "smtp",
+    send: () => Promise.reject(new Error("rejected pa+ss (sent as pa%2Bss)")),
+  };
+  expect(await sendTestEmail("a@b.c", env, log, provider)).toBe(1);
+  const out = lines.join("\n");
+  expect(out).not.toContain("pa+ss");
+  expect(out).not.toContain("pa%2Bss");
+});
+
 it("sends a message to the recipient with the test subject and sender in the body", async () => {
   const { log } = sink();
   const sent: { to: string; subject: string; text: string }[] = [];
