@@ -204,7 +204,9 @@ if the provider rejects it.
 On a deployed stage, the API logs `[email] smtp sent "<subject>"` when the provider accepts a
 message and `[email] smtp failed to send …` when it doesn't (on AWS:
 `aws logs tail /ecs/fixedstep-<stage>-api --region us-east-2 | grep '\[email\]'`). "Sent" means
-Postmark accepted it; whether it was delivered is in the Server's Activity.
+Postmark accepted it; whether it was delivered is in the Server's Activity. The logged subject
+is the template's, without the `[staging]` prefix that Activity and the inbox show, and logs
+never include the recipient address.
 
 Bounces and spam complaints show up in each Server's **Activity** page (Default Transactional
 Stream). Postmark suppresses hard-bounced and complaining addresses automatically; they're listed
