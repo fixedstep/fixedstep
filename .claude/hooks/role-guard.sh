@@ -57,6 +57,7 @@ guard_tester() {
   local p
   p="$(edit_path)" || return 0
   [[ -n "$p" ]] || return 0
+  p="$(normalize "$p")"
   case "$p" in
     *.test.ts | *.test.tsx) ;;
     *) block "$tool on $p. The tester may only create or edit *.test.ts / *.test.tsx files." ;;
@@ -71,7 +72,8 @@ node_modules/.bin/{biome check, tsc --noEmit, vitest run}, pnpm lint/typecheck/t
 
 # Splits $1 into command segments (one per line of the global `segments` array) on unquoted
 # `&&`, `||`, `;`, `|`, `&` and newlines. Blocks unquoted output redirection (other than to
-# /dev/null or another fd) and command substitution outside single quotes.
+# /dev/null or another fd), command substitution outside single quotes, and unquoted ANSI-C
+# quoting (`$'…'`, which this parser doesn't understand) and process substitution (`<(…)`).
 segments=()
 split_command() {
   local s="$1" cur="" q="" c n i len=${#1}
@@ -99,6 +101,14 @@ split_command() {
     case "$c" in
       "'" | '"')
         q="$c"
+        cur+="$c"
+        ;;
+      '$')
+        [[ "$n" == "'" ]] && block "\$'...' quoting is not allowed in reviewer commands; use plain quotes."
+        cur+="$c"
+        ;;
+      '<')
+        [[ "$n" == '(' ]] && block "process substitution <(...) is not allowed in reviewer commands."
         cur+="$c"
         ;;
       '>')
@@ -142,20 +152,29 @@ split_command() {
   segments+=("$cur")
 }
 
+# Environment assignments allowed before a reviewer command (`CI=1 node_modules/.bin/vitest …`).
+# Anything else (GIT_PAGER, GIT_EXTERNAL_DIFF, GIT_CONFIG_*, LD_PRELOAD, …) can run code.
+ALLOWED_ENV='CI|NO_COLOR|FORCE_COLOR|TERM|LC_ALL|LANG'
+
 check_segment() {
   local seg="$1"
-  # Trim, then drop subshell/group punctuation and leading env assignments.
+  # Trim, then drop subshell/group punctuation and leading (allowlisted) env assignments.
   seg="${seg#"${seg%%[![:space:]]*}"}"
   seg="${seg%"${seg##*[![:space:]]}"}"
   while [[ "$seg" =~ ^[\(\{][[:space:]]*(.*)$ ]]; do seg="${BASH_REMATCH[1]}"; done
   while [[ "$seg" =~ ^(.*[^[:space:]])[[:space:]]*[\)\}]$ ]]; do seg="${BASH_REMATCH[1]}"; done
   [[ -z "$seg" ]] && return 0
-  while [[ "$seg" =~ ^[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+(.*)$ ]]; do
-    seg="${BASH_REMATCH[1]}"
+  while [[ "$seg" =~ ^([A-Za-z_][A-Za-z0-9_]*)=[^[:space:]]*[[:space:]]+(.*)$ ]]; do
+    local var="${BASH_REMATCH[1]}"
+    seg="${BASH_REMATCH[2]}"
+    [[ "$var" =~ ^($ALLOWED_ENV)$ ]] ||
+      block "setting $var is not allowed; only $ALLOWED_ENV may prefix a reviewer command."
   done
   # Normalise tool paths: $CLAUDE_PROJECT_DIR/node_modules/.bin/x and ./node_modules/.bin/x.
-  seg="${seg#"$project_dir"/}"
-  seg="${seg#./}"
+  local stripped
+  for stripped in "${seg#"$project_dir"/}" "${seg#./}"; do
+    [[ "$stripped" == node_modules/.bin/* ]] && seg="$stripped"
+  done
   # Normalise harmless git global options.
   if [[ "$seg" =~ ^git[[:space:]] ]]; then
     while [[ "$seg" =~ ^git[[:space:]]+(--no-pager|-C[[:space:]]+[^[:space:]]+)[[:space:]]+(.*)$ ]]; do
@@ -163,20 +182,33 @@ check_segment() {
     done
   fi
   local words=" $seg "
-
-  # Flags that write files, whatever the command.
-  [[ "$words" =~ [[:space:]](--write|--fix|--apply|--apply-unsafe)([[:space:]=]) ]] &&
-    block "'${BASH_REMATCH[1]}' writes files; the reviewer only runs checks read-only."
-  [[ "$words" =~ [[:space:]](--output[A-Za-z-]*)([[:space:]=]) ]] &&
-    block "'${BASH_REMATCH[1]}' writes a file; the reviewer is read-only."
-
   local cmd="${seg%%[[:space:]]*}"
+
+  # Flags that write files, checked only for the commands where they do (so search text such
+  # as `grep 'biome check --write'` stays allowed). pnpm passes extra args to biome/vitest.
+  case "$cmd" in
+    node_modules/.bin/biome | pnpm)
+      [[ "$words" =~ [[:space:]](--write|--fix|--apply|--apply-unsafe)([[:space:]=]) ]] &&
+        block "'${BASH_REMATCH[1]}' writes files; the reviewer only runs checks read-only."
+      ;;&
+    git | node_modules/.bin/vitest | pnpm)
+      # git diff/log/show --output (and its abbreviations); vitest --outputFile.
+      [[ "$words" =~ [[:space:]](--out[A-Za-z-]*)([[:space:]=]) ]] &&
+        block "'${BASH_REMATCH[1]}' writes a file; the reviewer is read-only."
+      ;;
+  esac
+
   case "$cmd" in
     tee) block "tee writes files; the reviewer is read-only." ;;
     sort)
-      # Of the allowed commands only sort writes with -o (grep -o / find -o are harmless).
+      # Of the allowed commands only sort writes with -o / --output (grep -o / find -o are
+      # harmless), and --compress-program (any abbreviation, `--co…`) runs a program.
       [[ "$words" =~ [[:space:]]-[A-Za-z]*o ]] &&
         block "sort -o writes a file; the reviewer is read-only."
+      [[ "$words" =~ [[:space:]]--o ]] &&
+        block "sort --output writes a file; the reviewer is read-only."
+      [[ "$words" =~ [[:space:]]--co ]] &&
+        block "sort --compress-program runs a program; not allowed for the reviewer."
       return 0
       ;;
     rg)
@@ -193,13 +225,23 @@ check_segment() {
     sed)
       [[ "$words" =~ [[:space:]](-[A-Za-z]*i[A-Za-z.]*|--in-place[^[:space:]]*)[[:space:]] ]] &&
         block "sed ${BASH_REMATCH[1]} edits files in place; the reviewer is read-only."
-      [[ "$seg" =~ ^sed[[:space:]]+-n([[:space:]]|$) ]] && return 0
+      # GNU sed's e (run a command), w/W (write a file) and r/R (read a file) commands and the
+      # s///e and s///w flags. Rough token match: the letter after an address, `;`, `{`, `/`,
+      # quote or space, optionally after s/// flags, and followed by a space, `;`, `}`, quote
+      # or the end. It can false-positive on odd regex text; `sed --sandbox` skips the check
+      # (GNU sed then rejects those commands itself).
+      local sed_cmd_re="[0-9\$/,!;{}[:space:]'\"][gpIiMm0-9]*([ewWrR])([[:space:];}'\"]|$)"
+      if [[ ! "$words" =~ [[:space:]]--sandbox[[:space:]] && "$words" =~ $sed_cmd_re ]]; then
+        block "sed '${BASH_REMATCH[1]}' command runs, reads or writes files; use plain 'sed -n' printing (or --sandbox)."
+      fi
+      [[ "$seg" =~ ^sed[[:space:]]+(--sandbox[[:space:]]+)?-n([[:space:]]|$) ]] && return 0
       ;;
     git)
       [[ "$seg" =~ ^git[[:space:]]+(diff|log|show|status|rev-parse|check-ignore|ls-files|merge-base)([[:space:]]|$) ]] &&
         return 0
       ;;
     node_modules/.bin/biome)
+      # --write/--fix/--apply were checked above.
       [[ "$seg" =~ ^node_modules/\.bin/biome[[:space:]]+check([[:space:]]|$) ]] && return 0
       ;;
     node_modules/.bin/tsc)

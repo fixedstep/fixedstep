@@ -45,6 +45,14 @@ deny tester "$(edit Edit /repo/apps/api/src/x.ts)"
 deny tester "$(edit Write /repo/apps/api/src/x.test.ts.bak)"
 deny tester "$(edit MultiEdit /repo/tasks/in-progress/x.md)"
 deny tester "$(edit Edit /repo/apps/api/src/x.spec.ts)"
+allow tester "$(edit Edit apps/api/src/x.test.ts)"
+allow tester "$(edit Edit /repo/apps/api/src/../src/x.test.ts)"
+# A *.test.ts symlink to a production file resolves to the production file.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+touch "$tmp/prod.ts"
+ln -s "$tmp/prod.ts" "$tmp/link.test.ts"
+deny tester "$(edit Write "$tmp/link.test.ts")"
 
 # reviewer: allowed
 for c in \
@@ -60,7 +68,15 @@ for c in \
   './node_modules/.bin/biome check .' \
   '/repo/node_modules/.bin/vitest run --configLoader runner' \
   'node_modules/.bin/tsc -p apps/api --noEmit' \
-  'for_x=1 node_modules/.bin/tsc -p infra --noEmit' \
+  'CI=1 node_modules/.bin/tsc -p infra --noEmit' \
+  'NO_COLOR=1 FORCE_COLOR=0 node_modules/.bin/vitest run --configLoader runner' \
+  "grep -n 'biome check --write .' CLAUDE.md" \
+  'rg -n -- "--output=x|--fix" .claude' \
+  "sed -n -e '/end/p' apps/api/src/index.ts" \
+  "sed -n '/^export /p;/return/p' apps/api/src/index.ts" \
+  "sed --sandbox -n '1e touch x' f" \
+  "echo 'a\$b' \"<(x)\"" \
+  'sort -T /tmp -u f' \
   'node_modules/.bin/vitest run --configLoader runner 2>&1 | tail -40' \
   'node_modules/.bin/tsc -p apps/web --noEmit && node_modules/.bin/tsc -p apps/api --noEmit' \
   'grep -rn "a|b>c" apps/api/src | head' \
@@ -111,6 +127,32 @@ for c in \
   'rg --pre ./x.sh foo' \
   'git -c core.pager=sh log' \
   'rm x' \
+  'for_x=1 node_modules/.bin/tsc -p infra --noEmit' \
+  'GIT_EXTERNAL_DIFF=rm git diff' \
+  'GIT_PAGER=sh git log' \
+  'LD_PRELOAD=/tmp/x.so ls' \
+  'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.pager GIT_CONFIG_VALUE_0=sh git log' \
+  'CI=1 GIT_PAGER=sh git log' \
+  'FOO=bar' \
+  "echo \$'\\'' ; touch x ; echo ''" \
+  'cat <(touch x)' \
+  'diff <(git show HEAD:a) a' \
+  "sed -n '1e touch x' f" \
+  "sed -n '\$e id' f" \
+  "sed -n '1,5w out.txt' f" \
+  "sed -n 's/a/b/e' f" \
+  "sed -n 's/a/b/gw out.txt' f" \
+  "sed -n '1r /etc/passwd' f" \
+  "sed -n '/x/{p;W out.txt}' f" \
+  'sort --compress-program=sh f' \
+  'sort --compress-prog sh f' \
+  'sort --output=out.txt f' \
+  'git log --outp=x' \
+  'node_modules/.bin/vitest run --reporter=json --outputFile=x.json' \
+  'node_modules/.bin/biome check --apply-unsafe .' \
+  'pnpm lint --write' \
+  './x.sh' \
+  '/repo/x.sh' \
   'git diff & touch x' \
   $'git status\ntouch x'; do
   deny reviewer "$(bash_cmd "$c")"

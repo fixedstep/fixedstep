@@ -40,4 +40,5 @@ limits the reviewer's Bash to an allowlist that matches them.
   sandbox: only the user changes them. Agents draft changes in the scratchpad, and the reviewer
   flags any diff touching them for the user's sign-off.
 - Only the lead runs state-changing git (commit, branch, switch, push, rebase, reset, stash, add,
-  merge, tag). The sandbox also mounts `.git` read-only for agents, so those commands fail anyway.
+  merge, tag). The sandbox mounts `.git` read-only for every session, the lead included, so the
+  lead hands those commands to the user to run with `!`.

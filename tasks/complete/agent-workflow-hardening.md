@@ -60,13 +60,13 @@ The first run worked, but the lead had to patch around gaps by hand in nearly ev
 
 ## Acceptance criteria
 
-- [ ] `designer.md`, `tester.md` and `reviewer.md` forbid state-changing git commands.
-- [ ] Tool-level enforcement of role limits is either in place, or written up here with what
+- [x] `designer.md`, `tester.md` and `reviewer.md` forbid state-changing git commands.
+- [x] Tool-level enforcement of role limits is either in place, or written up here with what
       Claude Code supports and the exact config for the user to apply.
-- [ ] SKILL.md step 6 always re-reviews and defines the failure path and the round cap.
-- [ ] SKILL.md step 5 requires a clean working tree and reviews `origin/main...HEAD`.
-- [ ] SKILL.md step 7 has no attribution line and includes all review rounds.
-- [ ] The sandbox check commands are documented once and referenced by the agents, so a lead
+- [x] SKILL.md step 6 always re-reviews and defines the failure path and the round cap.
+- [x] SKILL.md step 5 requires a clean working tree and reviews `origin/main...HEAD`.
+- [x] SKILL.md step 7 has no attribution line and includes all review rounds.
+- [x] The sandbox check commands are documented once and referenced by the agents, so a lead
       prompt no longer needs to repeat them.
 
 ## Plan
@@ -260,16 +260,29 @@ Branch (a) applies. What the Claude Code docs say
 | tester | Edit/Write only `*.test.ts` / `*.test.tsx` | frontmatter hook → `role-guard.sh tester` |
 | reviewer | No Edit/Write | `tools: Read, Grep, Glob, Bash` (enforced now) |
 | reviewer | Bash limited to a read-only allowlist | frontmatter hook (`Bash`) → `role-guard.sh reviewer` |
-| all agents | No state-changing git | sandbox: `.git` is read-only for every agent; prompts say why |
+| all agents | No state-changing git | sandbox: `.git` is read-only for every session (lead included); prompts say why |
 
 The reviewer allowlist splits commands on unquoted `&&`, `||`, `;`, `|`, `&` and newlines, and
 every segment must start with an allowed command: `git diff/log/show/status/rev-parse/
 check-ignore/ls-files/merge-base`, `cd`, `pwd`, `echo`, `ls`, `cat`, `head`, `tail`, `wc`,
 `sort`, `uniq`, `diff`, `grep`, `rg`, `find`, `sed -n`, `jq`, `node_modules/.bin/biome check`,
 `node_modules/.bin/tsc … --noEmit`, `node_modules/.bin/vitest run`, and `pnpm lint/typecheck/
-test`. It blocks output redirection (other than to `/dev/null` or another fd), command
-substitution, `tee`, `--output*`, `sort -o`, `sed -i`, `find -delete/-exec/-ok/-fprint*/-fls`,
-`rg --pre`, `vitest -u`, and `--write/--fix/--apply`.
+test`. It blocks:
+
+- output redirection (other than to `/dev/null` or another fd), command substitution, process
+  substitution `<(…)`, and ANSI-C quoting `$'…'` (which its quote parser doesn't model);
+- leading `VAR=value` assignments other than `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM`, `LC_ALL`
+  and `LANG` (so `GIT_PAGER`, `GIT_EXTERNAL_DIFF`, `GIT_CONFIG_*`, `LD_PRELOAD` are out);
+- `tee`, `sort -o/--output/--compress-program`, `sed -i`, sed scripts with an `e`, `w`, `W`,
+  `r` or `R` command or `s///e`/`s///w` flag (unless run with `--sandbox`),
+  `find -delete/-exec/-ok/-fprint*/-fls`, `rg --pre`, `vitest -u`;
+- per command: `--write/--fix/--apply/--apply-unsafe` for biome (and `pnpm`, which forwards
+  them), `--out…` for git and vitest (`--output`, `--outputFile`). Search text that merely
+  contains those flags (`grep 'biome check --write'`) is allowed.
+
+The `./` and `$CLAUDE_PROJECT_DIR/` prefixes are only stripped when what follows is
+`node_modules/.bin/…`. The tester's path check resolves `..` and symlinks before matching
+`*.test.ts(x)`, like the designer's.
 
 The frontmatter hook command is a no-op until the script is installed:
 `f="$CLAUDE_PROJECT_DIR/.claude/hooks/role-guard.sh"; [ -x "$f" ] || exit 0; exec "$f" <role>`.
@@ -278,8 +291,10 @@ so a broken guard can't wedge an agent.
 
 ### Prompt-only (known gaps)
 
-- The guard is a check against mistakes, not a security boundary. String matching can be
-  dodged (e.g. `sed -n 'w file'`).
+- The guard is a check against mistakes, not a security boundary. The reviewer rules above
+  close the bypasses found in review, but string matching can't model everything a shell or an
+  allowed tool can do (e.g. options a tool reads from config files, or sed's token match, which
+  is heuristic and can also false-positive on unusual regex text).
 - The tester's Bash is unrestricted, so it could still write non-test files from the shell. Its
   prompt forbids that. If it turns out to matter, the reviewer allowlist could also be applied
   to the tester's `Bash` matcher.
@@ -288,12 +303,15 @@ so a broken guard can't wedge an agent.
 
 ### For the user to apply
 
-The script and its test harness are drafted in the session scratchpad
-(`role-guard.test.sh` passes: 81 cases). Install the script (and commit it, since `.gitignore`
-now un-ignores `.claude/hooks/`):
+`role-guard.sh` and its test harness `role-guard.test.sh` are installed and committed at
+`.claude/hooks/` (mode 755). No `settings.json` change is needed.
+
+The sandbox can't write `.claude/hooks/`, so future changes follow the same path: an agent
+drafts both files in the session scratchpad and runs `bash <scratchpad>/role-guard.test.sh`, the
+user reviews the `diff -u` against `.claude/hooks/`, then installs them:
 
 ```
-! install -D -m 755 /tmp/claude-1000/-home-timish-source-fixedstep/5a8d8f73-200d-4721-9ed3-dd1eb6503605/scratchpad/role-guard.sh .claude/hooks/role-guard.sh
+! install -m 755 <scratchpad>/role-guard.sh <scratchpad>/role-guard.test.sh .claude/hooks/
 ```
 
-No `settings.json` change is needed.
+The current version passes 118 cases.
