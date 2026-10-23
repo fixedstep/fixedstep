@@ -1231,9 +1231,19 @@ kbd {
   outline-offset: 2px;
   border-radius: 4px;
 }
-.star-rating .error {
-  flex-basis: 100%;
+/* Always in the layout with a fixed line box, so text appearing doesn't shift anything. Wraps
+   below the stars on its own line when the row is too narrow. */
+.rating-status {
+  flex: 1 1 16rem;
+  min-width: 0;
+  min-height: 18px;
+  margin-left: 8px;
   font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.rating-status.error {
+  color: var(--bad);
 }
 .completion-rate {
   margin: 12px 0 0;

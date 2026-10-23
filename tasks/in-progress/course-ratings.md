@@ -80,8 +80,15 @@ courses people like.
 
 - `StarRating.tsx` rollback with two rating saves in flight: if the first save fails while the
   second is still pending, the widget briefly shows the rating from before both clicks. The
-  refetch on settle corrects it, and the failed save shows no error. Possible fix: skip the
-  rollback while `qc.isMutating({ mutationKey: ["rate", slug] }) > 1`. Found in review round 2.
+  refetch on settle corrects it, and the failed save shows no error. Keyboard changes are now
+  debounced into one PUT, so this only happens with fast mouse clicks (each click saves at
+  once). Possible fix: skip the rollback while
+  `qc.isMutating({ mutationKey: ["rate", slug] }) > 1`. Found in review round 2.
+- `StarRating.tsx` save feedback and debouncing (after the manual UI check): a `role="status"`
+  region shows "Saving…" / "Saved: you rated N out of 5" (cleared after ~3 s) / the error;
+  arrow keys send one PUT ~500 ms after the last change, while a click, Enter or focus leaving
+  the stars sends at once. Needs a manual or `course-tester-agent` pass, since `apps/web` has
+  no DOM tests.
 
 ## Plan
 

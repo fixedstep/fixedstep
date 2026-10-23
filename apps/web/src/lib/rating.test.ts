@@ -1,7 +1,7 @@
 import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
 import { describe, expect, it } from "vitest";
 import type { Me } from "./api";
-import { formatRating, rateAccess, withRating } from "./rating";
+import { formatRating, rateAccess, ratingStatusText, withRating } from "./rating";
 
 const lesson = (id: string, completed = false): LessonSummary => ({
   id,
@@ -61,6 +61,27 @@ describe("rateAccess", () => {
   it("counts the lesson just completed", () => {
     expect(rateAccess(me(false), course("c"), "c-a")).toBe("rate");
     expect(rateAccess(me(false), course("c"), "other")).toBe("none");
+  });
+});
+
+describe("ratingStatusText", () => {
+  it("is empty when idle", () => {
+    expect(ratingStatusText("idle", null)).toBe("");
+    expect(ratingStatusText("idle", 4)).toBe("");
+  });
+
+  it("says saving while the PUT is in flight", () => {
+    expect(ratingStatusText("saving", 3)).toBe("Saving…");
+  });
+
+  it("names the saved rating", () => {
+    expect(ratingStatusText("saved", 1)).toBe("Saved: you rated 1 out of 5");
+    expect(ratingStatusText("saved", 5)).toBe("Saved: you rated 5 out of 5");
+    expect(ratingStatusText("saved", null)).toBe("Saved");
+  });
+
+  it("keeps the existing error text", () => {
+    expect(ratingStatusText("error", 2)).toBe("Couldn't save your rating. Try again.");
   });
 });
 

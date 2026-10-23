@@ -1,9 +1,12 @@
 import type { CourseOutline, CourseRating } from "@fixedstep/content-schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { formatRating, withRating } from "../lib/rating";
+import { formatRating, type RatingSaveState, ratingStatusText, withRating } from "../lib/rating";
 
 const STARS = [1, 2, 3, 4, 5] as const;
+const SAVE_DELAY_MS = 500;
+const SAVED_CLEAR_MS = 3000;
 
 /** Read-only average + count; `emptyText` (or nothing) below the minimum count. */
 export function RatingSummary({ rating, emptyText }: { rating: CourseRating; emptyText?: string }) {
@@ -24,12 +27,83 @@ export function RatingSummary({ rating, emptyText }: { rating: CourseRating; emp
 /**
  * Sets the caller's own rating. A fieldset of same-named native radios is the semantic
  * radiogroup and gives arrow-key, Tab and Space handling for free.
+ *
+ * Keyboard changes are debounced so stepping through the stars sends one PUT; a pointer click,
+ * Enter, or focus leaving the fieldset sends at once. Until the PUT goes out the choice lives
+ * only in `shown`, so a failed save rolls the cache back to the last saved rating.
  */
 export function StarRating({ course }: { course: CourseOutline }) {
   const rate = useRateCourse(course.slug);
-  const mine = course.rating.mine;
+  const { mutate, reset } = rate;
+  const [shown, setShown] = useState<number | null>(null);
+  const unsent = useRef<number | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pointer = useRef(false);
+  const mine = shown ?? course.rating.mine;
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  useEffect(() => {
+    if (!rate.isSuccess) return;
+    const t = setTimeout(reset, SAVED_CLEAR_MS);
+    return () => clearTimeout(t);
+  }, [rate.isSuccess, reset]);
+
+  function send() {
+    clearTimeout(timer.current);
+    timer.current = undefined;
+    const n = unsent.current;
+    if (n === null) return;
+    unsent.current = null;
+    // Per-call callbacks only fire for the latest mutate, which is the one `shown` tracks.
+    mutate(n, {
+      onSettled: () => {
+        if (unsent.current === null) setShown(null);
+      },
+    });
+  }
+
+  function change(n: number) {
+    unsent.current = n;
+    setShown(n);
+    clearTimeout(timer.current);
+    if (pointer.current) {
+      pointer.current = false;
+      send();
+    } else {
+      timer.current = setTimeout(send, SAVE_DELAY_MS);
+    }
+  }
+
+  // An unsent change hides a stale "Saved"/error message from the previous save.
+  const state: RatingSaveState = rate.isPending
+    ? "saving"
+    : shown !== null
+      ? "idle"
+      : rate.isError
+        ? "error"
+        : rate.isSuccess
+          ? "saved"
+          : "idle";
+
   return (
-    <fieldset className="star-rating">
+    <fieldset
+      className="star-rating"
+      onPointerDown={() => {
+        pointer.current = true;
+      }}
+      onKeyDown={(e) => {
+        pointer.current = false;
+        if (e.key === "Enter") {
+          // Commit now; don't submit a surrounding form. Focus stays on the radio.
+          e.preventDefault();
+          send();
+        }
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) send();
+      }}
+    >
       <legend className="sr-only">Your rating</legend>
       {STARS.map((n) => (
         <label key={n} className={mine !== null && n <= mine ? "filled" : undefined}>
@@ -39,17 +113,16 @@ export function StarRating({ course }: { course: CourseOutline }) {
             name={`rating-${course.slug}`}
             value={n}
             checked={mine === n}
-            onChange={() => rate.mutate(n)}
+            onChange={() => change(n)}
           />
           <span aria-hidden>★</span>
           <span className="sr-only">Rate {n} out of 5</span>
         </label>
       ))}
-      {rate.isError && (
-        <span className="error" role="status">
-          Couldn't save your rating. Try again.
-        </span>
-      )}
+      {/* Always rendered so the live region exists before its text changes, and its space is reserved. */}
+      <span className={state === "error" ? "rating-status error" : "rating-status"} role="status">
+        {ratingStatusText(state, rate.variables ?? null)}
+      </span>
     </fieldset>
   );
 }

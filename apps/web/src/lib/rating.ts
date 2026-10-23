@@ -26,6 +26,22 @@ export function rateAccess(
   return user.isAnonymous ? "guest" : "rate";
 }
 
+export type RatingSaveState = "idle" | "saving" | "saved" | "error";
+
+/** Text for the star widget's live status region; empty when there's nothing to say. */
+export function ratingStatusText(state: RatingSaveState, stars: number | null): string {
+  switch (state) {
+    case "saving":
+      return "Saving…";
+    case "saved":
+      return stars === null ? "Saved" : `Saved: you rated ${stars} out of 5`;
+    case "error":
+      return "Couldn't save your rating. Try again.";
+    default:
+      return "";
+  }
+}
+
 /** `courses` with `slug`'s rating replaced, leaving the input untouched. */
 export function withRating(
   courses: CourseOutline[],
