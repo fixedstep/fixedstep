@@ -132,6 +132,14 @@ const ratingRows = (u: string, slug: string) =>
     .from(courseRatings)
     .where(and(eq(courseRatings.userId, u), eq(courseRatings.courseId, ids[slug] as string)));
 
+/** Replaces every rating on `slug` with `byUser`, so a test doesn't lean on earlier ones. */
+const setRatings = async (slug: string, byUser: Record<string, number>) => {
+  await db.delete(courseRatings).where(eq(courseRatings.courseId, ids[slug] as string));
+  for (const [u, stars] of Object.entries(byUser)) {
+    expect((await put(u, slug, { stars })).status, u).toBe(200);
+  }
+};
+
 describe("PUT /courses/:slug/rating eligibility", () => {
   it("401s without a user", async () => {
     expect((await put(null, "a", { stars: 4 })).status).toBe(401);
@@ -160,6 +168,7 @@ describe("PUT /courses/:slug/rating eligibility", () => {
   });
 
   it("400s bad stars", async () => {
+    await setRatings("a", {});
     for (const body of [{ stars: 0 }, { stars: 6 }, { stars: 3.5 }, { stars: "4" }, undefined]) {
       expect((await put("member", "a", body)).status, JSON.stringify(body)).toBe(400);
     }
@@ -185,6 +194,7 @@ describe("PUT /courses/:slug/rating edge cases", () => {
   });
 
   it("400s malformed JSON", async () => {
+    await setRatings("a", {});
     const res = await app.request("/courses/a/rating", {
       method: "PUT",
       headers: headers("member"),
@@ -195,6 +205,7 @@ describe("PUT /courses/:slug/rating edge cases", () => {
   });
 
   it("counts a completion on a lesson that was later archived", async () => {
+    await setRatings("arch", {});
     const res = await put("member", "arch", { stars: 4 });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ average: null, count: 1, mine: 4 });
@@ -203,18 +214,19 @@ describe("PUT /courses/:slug/rating edge cases", () => {
 
 describe("rating aggregates at the boundaries", () => {
   it("shows an integer average at exactly the threshold", async () => {
-    for (const u of ["t1", "t2"]) await put(u, "t", { stars: 4 });
+    await setRatings("t", { t1: 4, t2: 4 });
     expect((await outline(null, "t")).rating).toEqual({ average: null, count: 2, mine: null });
     await put("t3", "t", { stars: 4 });
     expect((await outline("t3", "t")).rating).toEqual({ average: 4, count: 3, mine: 4 });
   });
 
   it("rounds a .25 tie up (4, 4, 4, 5 → 4.3)", async () => {
-    await put("t4", "t", { stars: 5 });
+    await setRatings("t", { t1: 4, t2: 4, t3: 4, t4: 5 });
     expect((await outline(null, "t")).rating).toEqual({ average: 4.3, count: 4, mine: null });
   });
 
   it("keeps mine null for an anonymous request even with ratings", async () => {
+    await setRatings("t", { t1: 4, t2: 4, t3: 4, t4: 5 });
     const rating = (await outline(null, "t")).rating;
     expect(rating.count).toBe(4);
     expect(rating.mine).toBeNull();
@@ -223,6 +235,7 @@ describe("rating aggregates at the boundaries", () => {
 
 describe("rating aggregates", () => {
   it("updates an existing rating instead of adding one", async () => {
+    await setRatings("a", {});
     expect((await put("member", "a", { stars: 3 })).status).toBe(200);
     const res = await put("member", "a", { stars: 5 });
     expect(res.status).toBe(200);
@@ -233,7 +246,8 @@ describe("rating aggregates", () => {
   });
 
   it("hides the average below 3 ratings and rounds it to one decimal at 3", async () => {
-    // member is already 5; with r1 at 4 there are 2 ratings.
+    await setRatings("a", { member: 5 });
+    // With r1 at 4 there are 2 ratings.
     await put("r1", "a", { stars: 4 });
     expect((await outline(null, "a")).rating).toEqual({ average: null, count: 2, mine: null });
 
@@ -245,6 +259,8 @@ describe("rating aggregates", () => {
   });
 
   it("reports the caller's own rating as mine", async () => {
+    await setRatings("a", { member: 5, r1: 4 });
+    await setRatings("b", {});
     expect((await outline("member", "a")).rating.mine).toBe(5);
     expect((await outline("r1", "a")).rating.mine).toBe(4);
     expect((await outline("r3", "a")).rating.mine).toBeNull();
@@ -252,7 +268,7 @@ describe("rating aggregates", () => {
   });
 
   it("drops a deleted user's rating", async () => {
-    await put("r4", "a", { stars: 1 });
+    await setRatings("a", { member: 5, r1: 4, r2: 4, r4: 1 });
     expect((await outline(null, "a")).rating.count).toBe(4);
     await db.delete(user).where(eq(user.id, "r4"));
     expect((await outline(null, "a")).rating).toEqual({ average: 4.3, count: 3, mine: null });

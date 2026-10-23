@@ -54,7 +54,11 @@ export function StarRating({ course }: { course: CourseOutline }) {
   );
 }
 
-/** PUTs the rating, updating the cached outline optimistically and rolling back on failure. */
+/**
+ * PUTs the rating, updating the cached outline optimistically and rolling back only this
+ * course's rating on failure. Always refetches afterwards: `cancelQueries` may have cancelled
+ * another refetch (e.g. the one after a passing submit), and a rollback can be stale.
+ */
 function useRateCourse(slug: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -62,19 +66,24 @@ function useRateCourse(slug: string) {
     onMutate: async (stars) => {
       await qc.cancelQueries({ queryKey: ["courses"] });
       const prev = qc.getQueryData<CourseOutline[]>(["courses"]);
-      const current = prev?.find((c) => c.slug === slug);
-      if (prev && current) {
-        qc.setQueryData(["courses"], withRating(prev, slug, { ...current.rating, mine: stars }));
+      const prevRating = prev?.find((c) => c.slug === slug)?.rating;
+      if (prev && prevRating) {
+        qc.setQueryData(["courses"], withRating(prev, slug, { ...prevRating, mine: stars }));
       }
-      return { prev };
+      return { prevRating };
     },
     onError: (_err, _stars, context) => {
-      if (context?.prev) qc.setQueryData(["courses"], context.prev);
+      const prevRating = context?.prevRating;
+      if (!prevRating) return;
+      qc.setQueryData<CourseOutline[]>(["courses"], (courses) =>
+        courses ? withRating(courses, slug, prevRating) : courses,
+      );
     },
     onSuccess: (rating) => {
       qc.setQueryData<CourseOutline[]>(["courses"], (courses) =>
         courses ? withRating(courses, slug, rating) : courses,
       );
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["courses"] }),
   });
 }
