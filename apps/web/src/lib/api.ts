@@ -1,7 +1,9 @@
 import type {
   CourseOutline,
+  CourseRating,
   LockedLesson,
   PublicLesson,
+  RateCourseRequest,
   SubmitRequest,
   SubmitResponse,
 } from "@fixedstep/content-schema";
@@ -61,6 +63,11 @@ export const api = {
     request<{ url: string }>("/billing/checkout", {
       method: "POST",
       body: JSON.stringify({ interval }),
+    }),
+  rateCourse: (slug: string, stars: number) =>
+    request<CourseRating>(`/courses/${slug}/rating`, {
+      method: "PUT",
+      body: JSON.stringify({ stars } satisfies RateCourseRequest),
     }),
   portal: () => request<{ url: string }>("/billing/portal", { method: "POST" }),
 };

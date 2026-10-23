@@ -302,16 +302,18 @@ kbd {
   margin-top: 24px;
 }
 .completion {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   padding: 14px 18px;
   border: 1px solid var(--ok);
   border-radius: 10px;
   background: color-mix(in srgb, var(--ok) 8%, var(--surface));
   animation: completion-in 0.35s ease-out;
+}
+.completion-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 .completion h3 {
   margin: 0;
@@ -1194,6 +1196,59 @@ kbd {
   border-radius: 10px;
   font-size: 14px;
   color: var(--muted);
+}
+
+/* Course ratings */
+.rating-summary {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.course-card-head .rating-summary {
+  margin-top: 6px;
+}
+.star-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+}
+.star-rating label {
+  position: relative;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--border);
+}
+.star-rating label.filled {
+  color: var(--accent);
+}
+.star-rating label:hover {
+  color: var(--accent);
+}
+.star-rating input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Always in the layout with a fixed line box, so text appearing doesn't shift anything. Wraps
+   below the stars on its own line when the row is too narrow. */
+.rating-status {
+  flex: 1 1 16rem;
+  min-width: 0;
+  min-height: 18px;
+  margin-left: 8px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.rating-status.error {
+  color: var(--bad);
+}
+.completion-rate {
+  margin: 12px 0 0;
 }
 .paywall-features {
   margin: 0;
