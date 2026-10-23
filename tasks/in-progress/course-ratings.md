@@ -58,19 +58,30 @@ courses people like.
 
 ## Acceptance criteria
 
-- [ ] Migration adds `course_ratings` with a composite PK, FKs and a 1–5 check constraint.
-- [ ] `PUT /courses/:slug/rating` returns the codes listed above (401/403/404/400), and rating
+- [x] Migration adds `course_ratings` with a composite PK, FKs and a 1–5 check constraint.
+- [x] `PUT /courses/:slug/rating` returns the codes listed above (401/403/404/400), and rating
       twice updates the row instead of adding a second one.
-- [ ] `GET /courses` includes `rating` per course. `average` is `null` below 3 ratings and
+- [x] `GET /courses` includes `rating` per course. `average` is `null` below 3 ratings and
       rounded to one decimal at or above 3. `mine` reflects the caller.
 - [ ] The catalog, course page and completion card show the rating as described. The widget
       works from the keyboard.
-- [ ] Tests cover:
+      *Open:* the code is wired in (reviewer checked it by reading, both rounds), but nobody has
+      used it in a browser yet. `apps/web` has no DOM tests. Check by hand in `pnpm dev`:
+      Tab into the widget, use the arrow keys, see the focus ring, and see the completion-card
+      prompt on a course's last lesson. The `course-tester-agent` task will automate this.
+- [x] Tests cover:
   - the eligibility rules (guest, no progress, progress in a *different* course)
   - the 3-rating threshold boundary (2 vs 3)
   - rounding (e.g. 4, 4, 5 → 4.3)
   - updating a rating that already exists
-- [ ] Lint, typecheck and tests pass (see CLAUDE.md "Running checks").
+- [x] Lint, typecheck and tests pass (see CLAUDE.md "Running checks").
+
+### Follow-ups (not blocking)
+
+- `StarRating.tsx` rollback with two rating saves in flight: if the first save fails while the
+  second is still pending, the widget briefly shows the rating from before both clicks. The
+  refetch on settle corrects it, and the failed save shows no error. Possible fix: skip the
+  rollback while `qc.isMutating({ mutationKey: ["rate", slug] }) > 1`. Found in review round 2.
 
 ## Plan
 
