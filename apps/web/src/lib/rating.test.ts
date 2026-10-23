@@ -36,12 +36,15 @@ describe("formatRating", () => {
   it("shows one decimal and the count", () => {
     expect(formatRating({ average: 4.3, count: 3, mine: null })).toBe("4.3 ★ (3)");
     expect(formatRating({ average: 4, count: 3, mine: 4 })).toBe("4.0 ★ (3)");
+    expect(formatRating({ average: 5, count: 120, mine: null })).toBe("5.0 ★ (120)");
   });
 });
 
 describe("rateAccess", () => {
   it("is none when signed out", () => {
     expect(rateAccess(undefined, course("c", true))).toBe("none");
+    // me is undefined while the query loads, even if the course is already completed
+    expect(rateAccess(undefined, course("c"), "c-a")).toBe("none");
     expect(rateAccess({ ...me(false), user: null }, course("c", true))).toBe("none");
   });
 
@@ -69,5 +72,20 @@ describe("withRating", () => {
     expect(out[0]?.rating).toEqual(rating);
     expect(out[1]).toBe(courses[1]);
     expect(courses[0]?.rating).toEqual({ average: null, count: 0, mine: null });
+  });
+
+  it("returns a new array and new object for the replaced course", () => {
+    const courses = [course("a"), course("b")];
+    const out = withRating(courses, "a", { average: 4.5, count: 4, mine: 5 });
+    expect(out).not.toBe(courses);
+    expect(out[0]).not.toBe(courses[0]);
+    expect(out[0]?.chapters).toBe(courses[0]?.chapters);
+  });
+
+  it("returns an equal copy when the slug is unknown", () => {
+    const courses = [course("a")];
+    const out = withRating(courses, "zzz", { average: 1, count: 3, mine: 1 });
+    expect(out).not.toBe(courses);
+    expect(out).toEqual(courses);
   });
 });

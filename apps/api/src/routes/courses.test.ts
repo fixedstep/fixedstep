@@ -78,7 +78,20 @@ beforeAll(async () => {
   await addCourse("draft", 2, { published: false });
   await addCourse("old", 3, { archivedAt: new Date() });
 
-  await addUser("member", ["a", "draft", "old"]);
+  await addCourse("t", 4);
+  await addCourse("arch", 5);
+  // Content sync later archived the only chapter and lesson of "arch".
+  await db
+    .update(chapters)
+    .set({ archivedAt: new Date() })
+    .where(eq(chapters.courseId, ids.arch as string));
+  await db
+    .update(lessons)
+    .set({ archivedAt: new Date() })
+    .where(eq(lessons.id, ids["arch-lesson"] as string));
+
+  await addUser("member", ["a", "draft", "old", "arch"]);
+  for (const t of ["t1", "t2", "t3", "t4"]) await addUser(t, ["t"]);
   await addUser("other", ["b"]);
   await addUser("guest", ["a"], true);
   await addUser("nobody", []);
@@ -151,6 +164,60 @@ describe("PUT /courses/:slug/rating eligibility", () => {
       expect((await put("member", "a", body)).status, JSON.stringify(body)).toBe(400);
     }
     expect(await ratingRows("member", "a")).toHaveLength(0);
+  });
+});
+
+describe("PUT /courses/:slug/rating edge cases", () => {
+  it("403s a guest before looking up the course (unpublished, unknown)", async () => {
+    for (const slug of ["draft", "nope"]) {
+      const res = await put("guest", slug, { stars: 4 });
+      expect(res.status, slug).toBe(403);
+      expect(await res.json()).toEqual({ error: "create an account to rate" });
+    }
+  });
+
+  it("404s before validating the body", async () => {
+    expect((await put("member", "draft", { stars: 99 })).status).toBe(404);
+  });
+
+  it("400s before checking progress", async () => {
+    expect((await put("nobody", "a", { stars: 0 })).status).toBe(400);
+  });
+
+  it("400s malformed JSON", async () => {
+    const res = await app.request("/courses/a/rating", {
+      method: "PUT",
+      headers: headers("member"),
+      body: "{not json",
+    });
+    expect(res.status).toBe(400);
+    expect(await ratingRows("member", "a")).toHaveLength(0);
+  });
+
+  it("counts a completion on a lesson that was later archived", async () => {
+    const res = await put("member", "arch", { stars: 4 });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ average: null, count: 1, mine: 4 });
+  });
+});
+
+describe("rating aggregates at the boundaries", () => {
+  it("shows an integer average at exactly the threshold", async () => {
+    for (const u of ["t1", "t2"]) await put(u, "t", { stars: 4 });
+    expect((await outline(null, "t")).rating).toEqual({ average: null, count: 2, mine: null });
+    await put("t3", "t", { stars: 4 });
+    expect((await outline("t3", "t")).rating).toEqual({ average: 4, count: 3, mine: 4 });
+  });
+
+  it("rounds a .25 tie up (4, 4, 4, 5 → 4.3)", async () => {
+    await put("t4", "t", { stars: 5 });
+    expect((await outline(null, "t")).rating).toEqual({ average: 4.3, count: 4, mine: null });
+  });
+
+  it("keeps mine null for an anonymous request even with ratings", async () => {
+    const rating = (await outline(null, "t")).rating;
+    expect(rating.count).toBe(4);
+    expect(rating.mine).toBeNull();
   });
 });
 
