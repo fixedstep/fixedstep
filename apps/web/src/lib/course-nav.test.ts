@@ -20,6 +20,7 @@ const course: CourseOutline = {
     { slug: "one", title: "One", lessons: [lesson("a", true), lesson("b")] },
     { slug: "two", title: "Two", lessons: [lesson("c")] },
   ],
+  rating: { average: null, count: 0, mine: null },
 };
 
 describe("findLessonContext", () => {

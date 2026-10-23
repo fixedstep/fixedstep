@@ -1,5 +1,6 @@
 import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
 import { Link } from "@tanstack/react-router";
+import { RatingSummary } from "../../components/StarRating";
 import { KIND_ICON, KIND_LABEL } from "../../lib/lesson-kind";
 
 export const allLessons = (course: CourseOutline) => course.chapters.flatMap((ch) => ch.lessons);
@@ -39,6 +40,7 @@ function CourseCard({ course, signedIn }: { course: CourseOutline; signedIn: boo
         <div>
           <h3>{course.title}</h3>
           <p className="muted">{course.description}</p>
+          <RatingSummary rating={course.rating} />
         </div>
         <dl className="course-stats">
           <div>

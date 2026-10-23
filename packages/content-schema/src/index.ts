@@ -102,11 +102,24 @@ export const LessonSummary = z.object({
 });
 export type LessonSummary = z.infer<typeof LessonSummary>;
 
+export const CourseRating = z.object({
+  /** Rounded to 1 decimal server-side; null below the minimum count. */
+  average: z.number().nullable(),
+  count: z.number().int(),
+  /** The caller's own rating, if any. */
+  mine: z.number().int().min(1).max(5).nullable(),
+});
+export type CourseRating = z.infer<typeof CourseRating>;
+
+export const RateCourseRequest = z.object({ stars: z.number().int().min(1).max(5) });
+export type RateCourseRequest = z.infer<typeof RateCourseRequest>;
+
 export const CourseOutline = z.object({
   slug: Slug,
   title: z.string(),
   description: z.string(),
   chapters: z.array(z.object({ slug: Slug, title: z.string(), lessons: z.array(LessonSummary) })),
+  rating: CourseRating,
 });
 export type CourseOutline = z.infer<typeof CourseOutline>;
 
