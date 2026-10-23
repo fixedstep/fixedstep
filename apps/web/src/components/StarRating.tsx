@@ -51,7 +51,10 @@ export function StarRating({ course }: { course: CourseOutline }) {
       clearTimeout(timer.current);
       // Leaving the page (e.g. Alt+Left) can skip blur, so send a waiting change instead of
       // dropping it. No per-call callbacks: they'd set state on an unmounted component.
-      if (unsent.current !== null) mutateRef.current(unsent.current);
+      if (unsent.current !== null) {
+        mutateRef.current(unsent.current);
+        unsent.current = null;
+      }
     },
     [],
   );

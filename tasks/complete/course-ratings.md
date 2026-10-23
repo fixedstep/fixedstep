@@ -63,12 +63,14 @@ courses people like.
       twice updates the row instead of adding a second one.
 - [x] `GET /courses` includes `rating` per course. `average` is `null` below 3 ratings and
       rounded to one decimal at or above 3. `mine` reflects the caller.
-- [ ] The catalog, course page and completion card show the rating as described. The widget
+- [x] The catalog, course page and completion card show the rating as described. The widget
       works from the keyboard.
-      *Open:* the code is wired in (reviewer checked it by reading, both rounds), but nobody has
-      used it in a browser yet. `apps/web` has no DOM tests. Check by hand in `pnpm dev`:
-      Tab into the widget, use the arrow keys, see the focus ring, and see the completion-card
-      prompt on a course's last lesson. The `course-tester-agent` task will automate this.
+      Checked by hand by the user in local dev (2026-10-23):
+      - arrow keys, Enter, Space and click all save and show the "Saved" feedback
+      - the completion-card prompt and layout look right on a course's last lesson
+      - arrow keys stay within one widget when two are on the page
+
+      `apps/web` has no DOM tests, so the `course-tester-agent` task will automate this check.
 - [x] Tests cover:
   - the eligibility rules (guest, no progress, progress in a *different* course)
   - the 3-rating threshold boundary (2 vs 3)
@@ -87,8 +89,17 @@ courses people like.
 - `StarRating.tsx` save feedback and debouncing (after the manual UI check): a `role="status"`
   region shows "Saving…" / "Saved: you rated N out of 5" (cleared after ~3 s) / the error;
   arrow keys send one PUT ~500 ms after the last change, while a click, Enter or focus leaving
-  the stars sends at once. Needs a manual or `course-tester-agent` pass, since `apps/web` has
-  no DOM tests.
+  the stars sends at once. The user checked it by hand. `course-tester-agent` should cover it
+  automatically.
+- `StarRating.tsx` unmount flush: the save sent when the widget unmounts with a change still
+  waiting keeps the unmounted widget's MutationObserver attached. The mutation is therefore
+  never garbage-collected from the MutationCache: one small entry per page exit that still had
+  an unsent change. It's harmless at this scale. To avoid it, run the flush through
+  `qc.getMutationCache().build(...)` rather than the hook's `mutate`. Found in review round 5.
+- Dev only: Vite's watcher in the compose `web` container can miss quick multi-file edits
+  through the bind mount and keep serving an old module (seen as "useId is not defined").
+  `docker compose restart web` fixes it. If it keeps happening, set `server.watch.usePolling`
+  for the dev container.
 
 ## Plan
 
