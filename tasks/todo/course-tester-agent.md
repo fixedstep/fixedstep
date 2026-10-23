@@ -3,6 +3,7 @@
 **Area:** new `e2e/` workspace package (or `apps/e2e`), `.github/workflows/ci.yml`,
 `.claude/agents/course-tester.md` (user-installed), `.claude/skills/ship-task/SKILL.md`
 (user-installed), `.claude/hooks/role-guard.sh` (user-installed), `CLAUDE.md`
+**Depends on:** `course-ratings` (PR #20) being merged, because spec 4 tests it.
 **Origin:** requested 2026-10-23, while shipping `course-ratings`. The ratings widget is built
 for the keyboard, but `apps/web` has no DOM tests, so nothing checks the real UI.
 
@@ -30,7 +31,9 @@ progress update, and hitting the paywall. UI regressions only turn up by hand.
   2. A quiz lesson: a wrong answer, then a right answer, then the completion card.
   3. A paid lesson shows the locked/upgrade state to a user without an entitlement.
   4. Course rating: rate from the lesson sidebar using only the keyboard; the average appears
-     after 3 ratings. Seed the data through the API or DB.
+     after 3 ratings. The API returns 403 to guests and to users who haven't completed a lesson in
+     that course, so the seed needs three signed-up users who have each completed a lesson in it.
+     Seeding bare rating rows won't do.
   5. Login, logout and password reset, with email read through the `log` provider's output.
 - **Environment:** `docker compose up -d postgres`, migrate, `content:sync` from
   `content-sample/`, then the API and web dev servers (or the built images). Use Playwright's
