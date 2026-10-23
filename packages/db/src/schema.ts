@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -193,6 +194,24 @@ export const lessonProgress = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.lessonId] })],
+);
+
+export const courseRatings = pgTable(
+  "course_ratings",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    stars: integer("stars").notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.courseId] }),
+    check("course_ratings_stars_check", sql`${t.stars} between 1 and 5`),
+  ],
 );
 
 export const xpReason = pgEnum("xp_reason", ["lesson_complete", "streak_bonus", "achievement"]);

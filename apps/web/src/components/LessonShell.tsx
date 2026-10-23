@@ -5,6 +5,9 @@ import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react
 import { api } from "../lib/api";
 import { findLessonContext, type LessonContext } from "../lib/course-nav";
 import { KIND_ICON, KIND_LABEL } from "../lib/lesson-kind";
+import { rateAccess } from "../lib/rating";
+import { GuestNudge } from "./GuestNudge";
+import { RatingSummary, StarRating } from "./StarRating";
 
 const WIDE = "(min-width: 1024px)";
 
@@ -62,6 +65,8 @@ export function LessonShell({ lessonId, children }: { lessonId: string; children
 function Outline({ ctx, hidden }: { ctx: LessonContext; hidden: boolean }) {
   const lessons = ctx.course.chapters.flatMap((ch) => ch.lessons);
   const done = lessons.filter((l) => l.completed).length;
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const access = rateAccess(me.data, ctx.course);
   return (
     <nav id="course-outline" className="course-outline" aria-label="Course outline" hidden={hidden}>
       <header>
@@ -69,6 +74,9 @@ function Outline({ ctx, hidden }: { ctx: LessonContext; hidden: boolean }) {
         <span className="muted">
           {done}/{lessons.length} complete
         </span>
+        <RatingSummary rating={ctx.course.rating} emptyText="Not enough ratings yet" />
+        {access === "rate" && <StarRating course={ctx.course} />}
+        {access === "guest" && <GuestNudge message="Create a free account to rate this course." />}
       </header>
       {ctx.course.chapters.map((chapter, i) => (
         <section key={chapter.slug}>
