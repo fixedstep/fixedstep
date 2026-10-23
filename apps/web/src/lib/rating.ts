@@ -28,6 +28,23 @@ export function rateAccess(
 
 export type RatingSaveState = "idle" | "saving" | "saved" | "error";
 
+/**
+ * Which save state the star widget shows. A request in flight wins; otherwise a change the
+ * user has made but not yet sent (`unsent`) hides the previous save's "Saved" or error.
+ */
+export function ratingSaveState(s: {
+  isPending: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  unsent: boolean;
+}): RatingSaveState {
+  if (s.isPending) return "saving";
+  if (s.unsent) return "idle";
+  if (s.isError) return "error";
+  if (s.isSuccess) return "saved";
+  return "idle";
+}
+
 /** Text for the star widget's live status region; empty when there's nothing to say. */
 export function ratingStatusText(state: RatingSaveState, stars: number | null): string {
   switch (state) {

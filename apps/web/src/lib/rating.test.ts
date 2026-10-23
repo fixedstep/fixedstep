@@ -1,7 +1,7 @@
 import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
 import { describe, expect, it } from "vitest";
 import type { Me } from "./api";
-import { formatRating, rateAccess, ratingStatusText, withRating } from "./rating";
+import { formatRating, rateAccess, ratingSaveState, ratingStatusText, withRating } from "./rating";
 
 const lesson = (id: string, completed = false): LessonSummary => ({
   id,
@@ -61,6 +61,30 @@ describe("rateAccess", () => {
   it("counts the lesson just completed", () => {
     expect(rateAccess(me(false), course("c"), "c-a")).toBe("rate");
     expect(rateAccess(me(false), course("c"), "other")).toBe("none");
+  });
+});
+
+describe("ratingSaveState", () => {
+  const none = { isPending: false, isError: false, isSuccess: false, unsent: false };
+
+  it("is idle before any save", () => {
+    expect(ratingSaveState(none)).toBe("idle");
+  });
+
+  it("shows saving while a request is in flight, even with a newer unsent change", () => {
+    expect(ratingSaveState({ ...none, isPending: true })).toBe("saving");
+    expect(ratingSaveState({ ...none, isPending: true, unsent: true })).toBe("saving");
+  });
+
+  it("shows the result of the last save", () => {
+    expect(ratingSaveState({ ...none, isSuccess: true })).toBe("saved");
+    expect(ratingSaveState({ ...none, isError: true })).toBe("error");
+  });
+
+  it("hides a stale Saved or error once there's an unsent change", () => {
+    expect(ratingSaveState({ ...none, isSuccess: true, unsent: true })).toBe("idle");
+    expect(ratingSaveState({ ...none, isError: true, unsent: true })).toBe("idle");
+    expect(ratingSaveState({ ...none, unsent: true })).toBe("idle");
   });
 });
 

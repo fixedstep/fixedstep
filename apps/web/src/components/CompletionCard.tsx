@@ -22,37 +22,43 @@ export function CompletionCard({
   const streakUp = streak !== undefined && prevStreak !== undefined && streak > prevStreak;
   const chapterDone = ctx?.endOfChapter && ctx.chapterComplete;
 
+  // The live region covers the lesson result only. The rating widget has its own status
+  // region, and nesting it in this one could announce each save twice.
   return (
-    <section className="completion" aria-live="polite">
-      <div className="completion-head">
-        <h3>{chapterDone ? `Chapter complete: ${ctx.chapter.title}` : "Lesson complete"}</h3>
-        <div className="completion-stats">
-          {xpAwarded > 0 && <span className="xp-gain">+{xpAwarded} XP</span>}
-          {streak !== undefined && streak > 0 && (
-            <span className={streakUp ? "streak-up" : undefined}>
-              🔥 {streak} day streak{streakUp && " ↑"}
-            </span>
-          )}
+    <section className="completion">
+      <div className="completion-body" aria-live="polite">
+        <div className="completion-head">
+          <h3>{chapterDone ? `Chapter complete: ${ctx.chapter.title}` : "Lesson complete"}</h3>
+          <div className="completion-stats">
+            {xpAwarded > 0 && <span className="xp-gain">+{xpAwarded} XP</span>}
+            {streak !== undefined && streak > 0 && (
+              <span className={streakUp ? "streak-up" : undefined}>
+                🔥 {streak} day streak{streakUp && " ↑"}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-      {ctx?.next ? (
-        <Link to="/lessons/$lessonId" params={{ lessonId: ctx.next.id }} className="button primary">
-          Next{ctx.endOfChapter ? " chapter" : ""}: {ctx.next.title} →
-        </Link>
-      ) : (
-        ctx && (
-          <>
+        {ctx?.next ? (
+          <Link
+            to="/lessons/$lessonId"
+            params={{ lessonId: ctx.next.id }}
+            className="button primary"
+          >
+            Next{ctx.endOfChapter ? " chapter" : ""}: {ctx.next.title} →
+          </Link>
+        ) : (
+          ctx && (
             <p className="muted">
               That's the end of {ctx.course.title}. <Link to="/">Back to courses</Link>
             </p>
-            {rateAccess(me.data, ctx.course, lessonId) === "rate" && (
-              <div className="completion-rate">
-                <strong>Rate {ctx.course.title}</strong>
-                <StarRating course={ctx.course} />
-              </div>
-            )}
-          </>
-        )
+          )
+        )}
+      </div>
+      {ctx && !ctx.next && rateAccess(me.data, ctx.course, lessonId) === "rate" && (
+        <div className="completion-rate">
+          <strong>Rate {ctx.course.title}</strong>
+          <StarRating course={ctx.course} />
+        </div>
       )}
     </section>
   );

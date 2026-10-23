@@ -302,16 +302,18 @@ kbd {
   margin-top: 24px;
 }
 .completion {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   padding: 14px 18px;
   border: 1px solid var(--ok);
   border-radius: 10px;
   background: color-mix(in srgb, var(--ok) 8%, var(--surface));
   animation: completion-in 0.35s ease-out;
+}
+.completion-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 .completion h3 {
   margin: 0;

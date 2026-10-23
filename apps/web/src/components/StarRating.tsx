@@ -1,8 +1,8 @@
 import type { CourseOutline, CourseRating } from "@fixedstep/content-schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { formatRating, type RatingSaveState, ratingStatusText, withRating } from "../lib/rating";
+import { formatRating, ratingSaveState, ratingStatusText, withRating } from "../lib/rating";
 
 const STARS = [1, 2, 3, 4, 5] as const;
 const SAVE_DELAY_MS = 500;
@@ -28,20 +28,33 @@ export function RatingSummary({ rating, emptyText }: { rating: CourseRating; emp
  * Sets the caller's own rating. A fieldset of same-named native radios is the semantic
  * radiogroup and gives arrow-key, Tab and Space handling for free.
  *
- * Keyboard changes are debounced so stepping through the stars sends one PUT; a pointer click,
- * Enter, or focus leaving the fieldset sends at once. Until the PUT goes out the choice lives
- * only in `shown`, so a failed save rolls the cache back to the last saved rating.
+ * Arrow-key changes are debounced so stepping through the stars sends one PUT; a pointer click,
+ * Enter, Space, focus leaving the fieldset, or unmounting sends at once. Until the PUT goes out
+ * the choice lives only in `shown`, so a failed save rolls the cache back to the last saved
+ * rating. The radio name includes `useId` because a page can hold two widgets for one course
+ * (outline and completion card); each keeps its own state and both read the shared cache.
  */
 export function StarRating({ course }: { course: CourseOutline }) {
   const rate = useRateCourse(course.slug);
   const { mutate, reset } = rate;
+  const id = useId();
   const [shown, setShown] = useState<number | null>(null);
   const unsent = useRef<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const pointer = useRef(false);
+  const immediate = useRef(false);
+  const mutateRef = useRef(mutate);
+  mutateRef.current = mutate;
   const mine = shown ?? course.rating.mine;
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current);
+      // Leaving the page (e.g. Alt+Left) can skip blur, so send a waiting change instead of
+      // dropping it. No per-call callbacks: they'd set state on an unmounted component.
+      if (unsent.current !== null) mutateRef.current(unsent.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!rate.isSuccess) return;
@@ -67,36 +80,36 @@ export function StarRating({ course }: { course: CourseOutline }) {
     unsent.current = n;
     setShown(n);
     clearTimeout(timer.current);
-    if (pointer.current) {
-      pointer.current = false;
+    if (immediate.current) {
+      immediate.current = false;
       send();
     } else {
       timer.current = setTimeout(send, SAVE_DELAY_MS);
     }
   }
 
-  // An unsent change hides a stale "Saved"/error message from the previous save.
-  const state: RatingSaveState = rate.isPending
-    ? "saving"
-    : shown !== null
-      ? "idle"
-      : rate.isError
-        ? "error"
-        : rate.isSuccess
-          ? "saved"
-          : "idle";
+  const state = ratingSaveState({
+    isPending: rate.isPending,
+    isError: rate.isError,
+    isSuccess: rate.isSuccess,
+    unsent: shown !== null,
+  });
 
   return (
     <fieldset
       className="star-rating"
       onPointerDown={() => {
-        pointer.current = true;
+        immediate.current = true;
       }}
       onKeyDown={(e) => {
-        pointer.current = false;
+        immediate.current = false;
         if (e.key === "Enter") {
           // Commit now; don't submit a surrounding form. Focus stays on the radio.
           e.preventDefault();
+          send();
+        } else if (e.key === " ") {
+          // Space checks an unchecked radio after keydown, so let that change send at once too.
+          immediate.current = true;
           send();
         }
       }}
@@ -110,7 +123,7 @@ export function StarRating({ course }: { course: CourseOutline }) {
           <input
             type="radio"
             className="sr-only"
-            name={`rating-${course.slug}`}
+            name={`rating-${course.slug}-${id}`}
             value={n}
             checked={mine === n}
             onChange={() => change(n)}
