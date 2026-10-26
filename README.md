@@ -49,6 +49,7 @@ Manager; on AWS, ECS Fargate behind API Gateway, RDS/Aurora and SSM Parameter St
 | `packages/content-cli` | `validate` / `sync` / `bundle` content |
 | `infra` | Pulumi (TypeScript): cloud-neutral app spec + per-cloud targets (GCP, AWS) |
 | `content-sample` | A tiny sample course for local dev and CI |
+| `e2e` | Playwright end-to-end suite (critical journeys) |
 
 ## Local development
 
@@ -65,6 +66,9 @@ e.g. `scripts/in-docker.sh pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm db:g
 
 To try the production images (API + SPA, and the grader, wired as deployed) against the local
 database: `docker compose --profile prod up --build api-prod` → http://localhost:3001.
+
+End-to-end tests (on the host, with its own database and ports 3100/5174): `pnpm db:up`, once
+`pnpm --filter @fixedstep/e2e exec playwright install chromium`, then `pnpm e2e`.
 
 ### Writing course content
 

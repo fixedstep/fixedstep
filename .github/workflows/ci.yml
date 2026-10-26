@@ -21,3 +21,48 @@ jobs:
       - run: pnpm test
       - run: pnpm content:validate
       - run: pnpm --filter @fixedstep/web build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Non-blocking until it has been reliably green on main; see CLAUDE.md "Running checks".
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: fixedstep
+          POSTGRES_PASSWORD: fixedstep
+          POSTGRES_DB: fixedstep
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fixedstep" --health-interval 2s
+          --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: pw
+        run: echo "version=$(node -p "JSON.parse(require('fs').readFileSync('e2e/node_modules/@playwright/test/package.json')).version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      # Always runs: on a cache hit it skips the download but still installs the apt deps.
+      - run: pnpm --filter @fixedstep/e2e exec playwright install --with-deps --only-shell chromium
+      - run: pnpm e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          retention-days: 7
+          # Otherwise the hidden e2e/.output (the API log) is skipped.
+          include-hidden-files: true
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/.output
