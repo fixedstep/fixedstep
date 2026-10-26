@@ -60,6 +60,8 @@ jobs:
         with:
           name: e2e-report
           retention-days: 7
+          # Otherwise the hidden e2e/.output (the API log) is skipped.
+          include-hidden-files: true
           path: |
             e2e/playwright-report
             e2e/test-results

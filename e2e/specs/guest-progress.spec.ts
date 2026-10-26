@@ -11,7 +11,16 @@ const solution = readFileSync(
 
 test("a guest passes a code lesson, then signs up and keeps their progress", async ({ page }) => {
   const id = await lessonId(page.request, LESSONS.code);
+  const lessonResponse = page.waitForResponse(
+    (r) => r.request().method() === "GET" && new URL(r.url()).pathname === `/api/lessons/${id}`,
+  );
   await page.goto(`/lessons/${id}`);
+
+  // Hidden tests and the solution never reach the browser.
+  const lesson = await (await lessonResponse).json();
+  expect(lesson.hasHiddenTests).toBe(true);
+  expect(lesson).not.toHaveProperty("hiddenTests");
+  expect(lesson).not.toHaveProperty("solution");
 
   // insertText adds the text as one input, so CodeMirror doesn't auto-indent or close brackets.
   await page.locator(".cm-content").click();

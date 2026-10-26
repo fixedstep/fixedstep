@@ -35,6 +35,9 @@ test("a student rates the course from the outline with the keyboard only", async
   const id = await lessonId(page.request, LESSONS.reading);
   await completeLesson(page.request, id);
 
+  // Fake timers from the first page load, so the rating's debounce uses them. The clock still
+  // flows in real time until runFor below.
+  await page.clock.install();
   await page.goto(`/lessons/${id}`);
   const outline = page.getByRole("navigation", { name: "Course outline" });
   await expect(outline.getByText("Not enough ratings yet")).toBeVisible();
@@ -47,13 +50,16 @@ test("a student rates the course from the outline with the keyboard only", async
   await tabTo(page, outline.getByRole("radio", { name: "Rate 1 out of 5" }));
   for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Enter");
+  // Past the 500 ms debounce (but short of the 3 s "Saved" reset), so a leftover arrow-key
+  // timer would have fired its own PUT by now.
+  await page.clock.runFor(1000);
 
   await expect(outline.getByText("Saved: you rated 4 out of 5")).toBeVisible();
   await expect(outline.getByRole("radio", { name: "Rate 4 out of 5" })).toBeChecked();
   // (5 + 4 + 4) / 3, rounded on the server.
   await expect(outline.getByText("4.3 ★ (3)")).toBeVisible();
   // The debounce and Enter together send exactly one PUT.
-  await expect.poll(() => puts.length).toBe(1);
+  expect(puts).toHaveLength(1);
 
   await page.goto("/");
   await expect(page.getByText("4.3 ★ (3)")).toBeVisible();

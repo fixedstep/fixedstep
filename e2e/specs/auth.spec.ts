@@ -37,7 +37,7 @@ test("sign in, sign out, and reset a forgotten password", async ({ page, request
 
   await page.goto("/login");
   await signIn(page, user.email, user.password);
-  await expect(page.locator(".error")).toBeVisible();
+  await expect(page.getByText("Invalid email or password")).toBeVisible();
   await signIn(page, user.email, newPassword);
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });
