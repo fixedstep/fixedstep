@@ -31,14 +31,29 @@ limits the reviewer's Bash to an allowlist that matches them.
     `node_modules/.bin/biome check --write .`)
   - typecheck: `node_modules/.bin/tsc -p <pkg> --noEmit` for each of `apps/api`, `apps/web`,
     `apps/grader`, `packages/content-schema`, `packages/test-harness`, `packages/db`,
-    `packages/content-cli` and `infra` (what `pnpm -r typecheck` covers)
+    `packages/content-cli`, `infra` and `e2e` (what `pnpm -r typecheck` covers)
   - test: `node_modules/.bin/vitest run --configLoader runner` (the flag avoids an EROFS on
     `node_modules/.vite-temp`)
+- e2e (Playwright, `e2e/`): needs Postgres (`docker compose up -d postgres`) and, once,
+  Chromium: the user runs `! pnpm --filter @fixedstep/e2e exec playwright install chromium`
+  (Playwright's CDN isn't an allowed sandbox domain). Agents run exactly
+  `e2e/node_modules/.bin/playwright test --config e2e/playwright.config.ts` as a bare Bash call
+  (no `cd &&`, `;`, redirects, pipes or extra args). It's in `sandbox.excludedCommands` and
+  `permissions.allow` in `.claude/settings.local.json`, which match only that verbatim command;
+  anything else runs sandboxed, and a sandboxed command can't reach the host's Postgres on
+  localhost. Don't set `allowNestedUserNamespaces` for it. Humans and CI: `pnpm e2e`.
+  - It uses its own DB `fixedstep_e2e` (recreated on every run) and ports 3100/5174.
+  - Report: `e2e/playwright-report/`. Failure screenshots and traces: `e2e/test-results/`.
+    API log: `e2e/.output/api.log`.
+  - The CI `e2e` job is non-blocking for now.
 - Change files with the Edit/Write tools, not shell redirection or `sed -i`.
 - Diff against `origin/main` (`git diff origin/main...HEAD`); local `main` can be stale.
 - `.claude/hooks/`, `.claude/settings*.json` and agent `hooks:` frontmatter run outside the
   sandbox: only the user changes them. Agents draft changes in the scratchpad, and the reviewer
   flags any diff touching them for the user's sign-off.
-- Only the lead runs state-changing git (commit, branch, switch, push, rebase, reset, stash, add,
-  merge, tag). The sandbox mounts `.git` read-only for every session, the lead included, so the
-  lead hands those commands to the user to run with `!`.
+- Only the lead runs state-changing git; agents never do. `sandbox.excludedCommands` in
+  `.claude/settings.local.json` runs `git fetch|pull|switch|add|commit|mv|push|restore|rm` and
+  `gh pr|run` outside the sandbox, but only as a bare command (no `cd &&`, `;`, redirects or
+  pipes), so the lead runs those itself, one per Bash call. Anything else (rebase, reset, stash,
+  merge, tag; `git config`/`-c` are denied) goes to the user with `!`. `.git` is otherwise
+  read-only to sandboxed commands.
