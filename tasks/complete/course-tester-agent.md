@@ -55,15 +55,16 @@ progress update, and hitting the paywall. UI regressions only turn up by hand.
 
 ## Acceptance criteria
 
-- [ ] `e2e/` package with Playwright config and the essential specs above, passing locally from
-      one documented command.
-- [ ] Specs are independent and seed their own data, with no order dependence and no shared users.
-- [ ] CI job runs the suite with a timeout and browser caching. Its gating policy is documented.
-- [ ] `course-tester` agent definition, role-guard rule and ship-task step drafted, and installed
+- [x] `e2e/` package with Playwright config and the essential specs above, passing locally from
+      one documented command. (6/6 twice in a row on `aac7205`, via the excluded agent command.)
+- [x] Specs are independent and seed their own data, with no order dependence and no shared users.
+- [x] CI job runs the suite with a timeout and browser caching. Its gating policy is documented.
+      (Non-blocking until ~10 consecutive green `main` runs.)
+- [x] `course-tester` agent definition, role-guard rule and ship-task step drafted, and installed
       by the user.
-- [ ] Sandbox settings needed to run the suite from an agent are documented in CLAUDE.md
+- [x] Sandbox settings needed to run the suite from an agent are documented in CLAUDE.md
       "Running checks".
-- [ ] Lint, typecheck and tests pass.
+- [x] Lint, typecheck and tests pass.
 
 ## Plan
 
