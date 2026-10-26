@@ -5,6 +5,8 @@
 # allows it. Roles:
 #   designer  Edit/Write/MultiEdit/NotebookEdit only on $CLAUDE_PROJECT_DIR/tasks/**/*.md
 #   tester    Edit/Write/MultiEdit/NotebookEdit only on *.test.ts / *.test.tsx
+#   course-tester  Edit/Write/MultiEdit/NotebookEdit only under $CLAUDE_PROJECT_DIR/e2e/
+#             (not e2e/node_modules/)
 #   reviewer  Bash limited to a read-only allowlist (git inspection, file reading, checks)
 #
 # This is a guard against mistakes, not a security boundary: a determined agent can get around
@@ -62,6 +64,17 @@ guard_tester() {
     *.test.ts | *.test.tsx) ;;
     *) block "$tool on $p. The tester may only create or edit *.test.ts / *.test.tsx files." ;;
   esac
+}
+
+guard_course_tester() {
+  local p
+  p="$(edit_path)" || return 0
+  [[ -n "$p" ]] || return 0
+  p="$(normalize "$p")"
+  local e2e
+  e2e="$(normalize "$project_dir/e2e")"
+  [[ "$p" == "$e2e"/* && "$p" != "$e2e/node_modules"/* ]] ||
+    block "$tool on $p. The course-tester may only edit files under e2e/ (not e2e/node_modules/)."
 }
 
 # --- reviewer: Bash allowlist ---------------------------------------------------------------
@@ -277,6 +290,7 @@ guard_reviewer() {
 case "$role" in
   designer) guard_designer ;;
   tester) guard_tester ;;
+  course-tester) guard_course_tester ;;
   reviewer) guard_reviewer ;;
   *) warn "unknown role '$role'; allowing" ;;
 esac

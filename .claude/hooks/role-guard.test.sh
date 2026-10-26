@@ -54,6 +54,22 @@ touch "$tmp/prod.ts"
 ln -s "$tmp/prod.ts" "$tmp/link.test.ts"
 deny tester "$(edit Write "$tmp/link.test.ts")"
 
+# course-tester
+allow course-tester "$(edit Write /repo/e2e/specs/x.spec.ts)"
+allow course-tester "$(edit Edit e2e/support/api.ts)"
+allow course-tester "$(edit MultiEdit /repo/e2e/playwright.config.ts)"
+deny course-tester "$(edit Edit /repo/apps/web/src/x.tsx)"
+deny course-tester "$(edit Write /repo/e2e/../apps/api/src/x.ts)"
+deny course-tester "$(edit Write /repo/e2e-other/x.ts)"
+deny course-tester "$(edit Edit /repo/e2e/node_modules/x/index.js)"
+deny course-tester '{"tool_name":"NotebookEdit","tool_input":{"notebook_path":"/repo/x.ipynb"}}'
+# An e2e/ symlink pointing outside e2e/ resolves to its target.
+mkdir -p "$tmp/e2e"
+touch "$tmp/outside.ts"
+ln -s "$tmp/outside.ts" "$tmp/e2e/link.ts"
+CLAUDE_PROJECT_DIR="$tmp" allow course-tester "$(edit Write "$tmp/e2e/new.spec.ts")"
+CLAUDE_PROJECT_DIR="$tmp" deny course-tester "$(edit Write "$tmp/e2e/link.ts")"
+
 # reviewer: allowed
 for c in \
   'git diff origin/main...HEAD' \
