@@ -40,7 +40,7 @@ function CourseCard({ course, signedIn }: { course: CourseOutline; signedIn: boo
         <div>
           <h3>{course.title}</h3>
           <p className="muted">{course.description}</p>
-          <RatingSummary rating={course.rating} />
+          <RatingSummary rating={course.rating} emptyText="Not enough ratings yet" />
         </div>
         <dl className="course-stats">
           <div>

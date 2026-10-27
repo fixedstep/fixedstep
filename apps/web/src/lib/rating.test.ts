@@ -58,6 +58,18 @@ describe("rateAccess", () => {
     expect(rateAccess(me(false), course("c", true))).toBe("rate");
   });
 
+  it("finds a completed lesson in any chapter, and is none for a course with no lessons", () => {
+    const multi: CourseOutline = {
+      ...course("c"),
+      chapters: [
+        { slug: "one", title: "One", lessons: [lesson("c-a")] },
+        { slug: "two", title: "Two", lessons: [lesson("c-b"), lesson("c-c", true)] },
+      ],
+    };
+    expect(rateAccess(me(false), multi)).toBe("rate");
+    expect(rateAccess(me(false), { ...course("c"), chapters: [] }, "c-a")).toBe("none");
+  });
+
   it("counts the lesson just completed", () => {
     expect(rateAccess(me(false), course("c"), "c-a")).toBe("rate");
     expect(rateAccess(me(false), course("c"), "other")).toBe("none");

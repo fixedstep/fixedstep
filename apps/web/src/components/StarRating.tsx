@@ -32,7 +32,7 @@ export function RatingSummary({ rating, emptyText }: { rating: CourseRating; emp
  * Enter, Space, focus leaving the fieldset, or unmounting sends at once. Until the PUT goes out
  * the choice lives only in `shown`, so a failed save rolls the cache back to the last saved
  * rating. The radio name includes `useId` because a page can hold two widgets for one course
- * (outline and completion card); each keeps its own state and both read the shared cache.
+ * (lesson bar and completion card); each keeps its own state and both read the shared cache.
  */
 export function StarRating({ course }: { course: CourseOutline }) {
   const rate = useRateCourse(course.slug);
