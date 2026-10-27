@@ -79,12 +79,13 @@ in their prompts.
    content repo). If the final review lists `Human sign-off required`, put those paths in the
    PR body and get the user's explicit OK on them first.
 9. **Tidy.** Once the user has merged, confirm it with
-   `gh pr view <number> --repo fixedstep/fixedstep --json state,mergeCommit` (`MERGED`), then
-   run, each as its own bare Bash call from the platform repo:
+   `gh pr view <number> --repo fixedstep/fixedstep --json state,mergeCommit` (`MERGED`). The
+   shell may still be in another repo, so first `cd <platform repo path>` in its own Bash call
+   and check `pwd`. Then run, each as its own bare Bash call:
    ```
    git switch main
    git pull
    ```
    Deleting the local branch isn't in the excluded commands, so hand the user
-   `! git -C /home/timish/source/fixedstep branch -D <slug>` (`-D`: a squash merge leaves the
-   branch looking unmerged). Report the merge commit and any follow-ups the PR listed.
+   `! git -C <platform repo path> branch -D <slug>` (`-D`: a squash merge leaves the branch
+   looking unmerged). Report the merge commit and any follow-ups the PR listed.
