@@ -127,11 +127,19 @@ export function harnessRuntime(
   };
 
   // --- Registration & module loading -------------------------------------------------------
-  type Registered = { name: string; fn: () => void; hidden: boolean };
+  // A hint is author text shown under a failed test, for hidden tests too. Bad values are
+  // ignored rather than thrown: a throw would break the lesson and could leak a hidden name.
+  type Registered = { name: string; fn: () => void; hidden: boolean; hint: string };
   const registered: Registered[] = [];
   let currentHidden = false;
-  const test = (name: string, fn: () => void) => {
-    registered[registered.length] = { name: _String(name), fn, hidden: currentHidden };
+  const test = (name: string, fn: () => void, opts?: { hint?: unknown }) => {
+    const h = typeof opts === "object" && opts !== null ? opts.hint : undefined;
+    registered[registered.length] = {
+      name: _String(name),
+      fn,
+      hidden: currentHidden,
+      hint: typeof h === "string" ? h : "",
+    };
   };
   const harnessApi = _freeze({ test, expect, simulate, random });
 
@@ -175,11 +183,14 @@ export function harnessRuntime(
       passed = false;
       error = e instanceof Error ? _String(e.message) : show(e);
     }
-    results += `${i ? "," : ""}{"name":${_stringify(r.name)},"passed":${passed ? "true" : "false"},"hidden":${r.hidden ? "true" : "false"}${passed ? "" : `,"error":${_stringify(error)}`}}`;
+    results += `${i ? "," : ""}{"name":${_stringify(r.name)},"passed":${passed ? "true" : "false"},"hidden":${r.hidden ? "true" : "false"}${passed ? "" : `,"error":${_stringify(error)}`}${!passed && r.hint !== "" ? `,"hint":${_stringify(r.hint)}` : ""}}`;
   }
   return out(`"ok":true,"results":[${results}]`);
 }
 
 export type RawRun =
-  | { ok: true; results: { name: string; passed: boolean; hidden: boolean; error?: string }[] }
+  | {
+      ok: true;
+      results: { name: string; passed: boolean; hidden: boolean; error?: string; hint?: string }[];
+    }
   | { ok: false; error: string };

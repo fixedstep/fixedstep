@@ -159,6 +159,8 @@ export const TestResult = z.object({
   hidden: z.boolean(),
   /** Omitted for hidden tests so their inputs don't leak through error messages. */
   error: z.string().optional(),
+  /** Author-written "usual mistake"; only on failed tests. Sent for hidden tests too (unlike error). */
+  hint: z.string().optional(),
 });
 export type TestResult = z.infer<typeof TestResult>;
 

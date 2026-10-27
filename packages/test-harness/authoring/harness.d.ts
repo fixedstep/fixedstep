@@ -14,7 +14,11 @@ declare module "@fixedstep/harness" {
     update: (state: S, dt: number, input: Input) => S | undefined;
   };
 
-  export function test(name: string, fn: () => void): void;
+  /**
+   * `opts.hint` is the "usual mistake" message shown under the test when it fails (cut at 300
+   * chars). It is shown for hidden tests too, so never put inputs or expected values in it.
+   */
+  export function test(name: string, fn: () => void, opts?: { hint?: string }): void;
 
   export function expect(actual: unknown): {
     toBe(expected: unknown): void;
