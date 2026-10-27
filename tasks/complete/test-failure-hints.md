@@ -33,9 +33,8 @@ each test (forgot to multiply by `dt`, off-by-one at the grid edge) but have now
 - [x] Hidden tests still never return `error`.
 - [x] Tests without a hint behave as before.
 - [x] Harness tests cover the new parameter; `runtime.test.ts` still passes.
-- [ ] `ResultsPanel` shows the hint for failed tests; checked manually in `pnpm dev`.
-      _Open: the manual check is the user's. `e2e/specs/test-hints.spec.ts` covers the
-      rendering (local and server runs, no hint once passing, phone-width wrap)._
+- [x] `ResultsPanel` shows the hint for failed tests; checked manually in `pnpm dev` (user,
+      2026-10-27). Also covered by `e2e/specs/test-hints.spec.ts`.
 - [x] Lint, typecheck and tests pass.
 
 ## Plan
