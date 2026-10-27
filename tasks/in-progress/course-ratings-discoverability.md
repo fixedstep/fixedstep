@@ -36,17 +36,27 @@ UI on a fresh database.
 
 ## Acceptance criteria
 
-- [ ] Catalog cards for courses with no average (`rating.average === null`) show "No ratings
-      yet" (or the agreed wording), and still show no average.
-- [ ] On a lesson page, the rating summary and (for eligible users) the widget are visible
+- [x] Catalog cards for courses with no average (`rating.average === null`) show "No ratings
+      yet" (or the agreed wording), and still show no average. _Agreed wording: "Not enough
+      ratings yet"._
+- [x] On a lesson page, the rating summary and (for eligible users) the widget are visible
       without opening the outline, on desktop and at phone width.
-- [ ] The lesson shell (bar plus outline) renders at most one interactive widget. The completion
+- [x] The lesson shell (bar plus outline) renders at most one interactive widget. The completion
       card's widget on a course's last lesson may appear as well, since radio names are unique
       per widget.
 - [ ] Manual check in `pnpm dev`: keyboard use and the save feedback still work in the new spot.
-- [ ] Lint, typecheck and tests pass.
+      _Open: the user's check. E2E covers keyboard rating in the bar, stable layout while saving
+      at 360px, and the error message at 1280px._
+- [x] Lint, typecheck and tests pass.
 
 ## Plan
+
+> **Changed during implementation (user's choice, 2026-10-27):** one fixed string, "Not enough
+> ratings yet", wherever `rating.average === null` (catalog cards and the lesson bar). The
+> count-based `ratingEmptyText` helper, its unit tests and the e2e `getByText("No ratings yet")`
+> described below were not built. Also changed after review: at ≤600px the stars get their own
+> row (`flex-basis: 100%`) so save feedback can't move them, and the wide-screen status is
+> `16rem` so the error message fits one line.
 
 **Flags:** web-only. No API, DTO (`@fixedstep/content-schema`), DB, app-spec or infra changes, so
 nothing changes in `infra/src/gcp` or `infra/src/aws` and there's no cost impact. Nothing is
