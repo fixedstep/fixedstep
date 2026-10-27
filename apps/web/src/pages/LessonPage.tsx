@@ -6,6 +6,7 @@ import { CodeEditor } from "../components/CodeEditor";
 import { CompletionCard } from "../components/CompletionCard";
 import { EditorThemePicker } from "../components/EditorThemePicker";
 import { GuestNudge } from "../components/GuestNudge";
+import { HintsPanel } from "../components/HintsPanel";
 import { LessonShell } from "../components/LessonShell";
 import { Markdown } from "../components/Markdown";
 import { NotFound } from "../components/NotFound";
@@ -384,6 +385,7 @@ function CodeWorkspace({ lesson }: { lesson: PublicLesson }) {
         }
       />
       <SubmitStatus submit={submit} lessonId={lesson.id} />
+      <HintsPanel lessonId={lesson.id} status={submit.data?.hintStatus ?? lesson.hintStatus} />
       <details
         className="visible-tests"
         open={showTests}

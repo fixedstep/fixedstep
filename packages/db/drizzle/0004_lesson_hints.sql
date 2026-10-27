@@ -1,0 +1,1 @@
+ALTER TABLE "lessons" ADD COLUMN "hints" text[] DEFAULT '{}'::text[] NOT NULL;

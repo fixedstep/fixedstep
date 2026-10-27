@@ -74,6 +74,8 @@ export type LessonFrontmatter = z.infer<typeof LessonFrontmatter>;
  *   tests.ts         — visible tests (sent to the browser, run on both sides)
  *   tests.hidden.ts  — optional, server-only
  *   solution.ts      — server-only; CI checks it passes every test
+ *   hints.md         — optional, server-only; 1–MAX_HINTS hints separated by `---` lines,
+ *                      unlocked one per failed submission and sent only once unlocked
  */
 export const LESSON_FILES = {
   body: "lesson.md",
@@ -81,7 +83,10 @@ export const LESSON_FILES = {
   visibleTests: "tests.ts",
   hiddenTests: "tests.hidden.ts",
   solution: "solution.ts",
+  hints: "hints.md",
 } as const;
+
+export const MAX_HINTS = 4;
 
 // ---------------------------------------------------------------------------
 // API DTOs. Anything sent to the browser must be built from these, never from DB rows,
@@ -123,6 +128,14 @@ export const CourseOutline = z.object({
 });
 export type CourseOutline = z.infer<typeof CourseOutline>;
 
+/** Hint counts only, never the texts. Hint n unlocks after n failed submissions. */
+export const HintStatus = z.object({ total: z.number().int(), unlocked: z.number().int() });
+export type HintStatus = z.infer<typeof HintStatus>;
+
+/** GET /lessons/:id/hints. `hints` holds only the unlocked ones (`hints.length === unlocked`). */
+export const LessonHints = HintStatus.extend({ hints: z.array(z.string()) });
+export type LessonHints = z.infer<typeof LessonHints>;
+
 export const PublicLesson = z.object({
   id: z.string(),
   slug: Slug,
@@ -136,6 +149,7 @@ export const PublicLesson = z.object({
   hasHiddenTests: z.boolean(),
   quiz: z.array(PublicQuizQuestion).nullable(),
   completed: z.boolean(),
+  hintStatus: HintStatus,
 });
 export type PublicLesson = z.infer<typeof PublicLesson>;
 
@@ -190,5 +204,7 @@ export const SubmitResponse = z.object({
   streak: z.number().int().optional(),
   /** Set for quiz lessons. */
   quiz: z.array(QuizFeedback).optional(),
+  /** After counting this submission; `{ total: 0, unlocked: 0 }` for lessons without hints. */
+  hintStatus: HintStatus,
 });
 export type SubmitResponse = z.infer<typeof SubmitResponse>;

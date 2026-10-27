@@ -25,6 +25,12 @@ describe("newLesson", () => {
     expect(course?.published).toBe(false);
     expect(course?.chaptersLoaded[0]?.lessons).toEqual(["read-me", "quiz-me", "code-me"]);
     expect(course?.chaptersLoaded[1]?.lessonsLoaded[0]?.kind).toBe("sim");
+    // code/sim get a comment-only hints.md, which loads as "no hints".
+    expect(course?.chaptersLoaded[0]?.lessonsLoaded[2]?.hints).toEqual([]);
+    expect(course?.chaptersLoaded[1]?.lessonsLoaded[0]?.hints).toEqual([]);
+    await expect(
+      readFile(join(root, "courses/game/basics/code-me/hints.md"), "utf8"),
+    ).resolves.toMatch(/^<!--/);
     // Solutions pass; starters fail at least one visible test (no "already passes" warning).
     expect(await validateContent(courses)).toEqual([]);
   }, 30_000);

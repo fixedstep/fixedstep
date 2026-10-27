@@ -1,6 +1,7 @@
 import type {
   CourseOutline,
   CourseRating,
+  LessonHints,
   LockedLesson,
   PublicLesson,
   RateCourseRequest,
@@ -54,6 +55,8 @@ export const api = {
       throw e;
     }
   },
+  /** Only the hints the caller has unlocked. */
+  hints: (id: string) => request<LessonHints>(`/lessons/${id}/hints`),
   submit: (id: string, body: SubmitRequest | Record<string, never>) =>
     request<SubmitResponse>(`/lessons/${id}/submit`, {
       method: "POST",

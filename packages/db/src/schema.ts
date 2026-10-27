@@ -148,6 +148,8 @@ export const lessons = pgTable(
     solution: text("solution"),
     /** Server-only as stored (contains answers); strip via PublicQuizQuestion. */
     quiz: jsonb("quiz").$type<StoredQuizQuestion[]>(),
+    /** Server-only, like hiddenTests. Only unlocked hints are sent. */
+    hints: text("hints").array().notNull().default(sql`'{}'::text[]`),
     /** Hash of all lesson files; stored on submissions to know what version was graded. */
     contentHash: text("content_hash").notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),

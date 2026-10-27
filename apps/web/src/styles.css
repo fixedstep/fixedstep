@@ -280,6 +280,49 @@ main {
   white-space: pre-wrap;
 }
 
+.hints-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  min-width: 0;
+}
+.hints-panel h3 {
+  margin: 4px 0;
+  font-size: 16px;
+}
+.hints-panel ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.hints-panel li {
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.hint-label,
+.hint-note {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.hint-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.hints-panel .prose > :first-child {
+  margin-top: 0;
+}
+.hints-panel .prose > :last-child {
+  margin-bottom: 0;
+}
+.hints-panel pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 kbd {
   font: inherit;
   font-size: 11px;

@@ -1,8 +1,9 @@
 import { fileURLToPath } from "node:url";
 import { serializeBundle } from "@fixedstep/content-cli/bundle";
 import { loadContent } from "@fixedstep/content-cli/load";
-import { courses } from "@fixedstep/db";
+import { courses, lessons } from "@fixedstep/db";
 import { createTestDb } from "@fixedstep/db/testing";
+import { eq } from "drizzle-orm";
 import { beforeAll, expect, it } from "vitest";
 import { internalRoutes } from "./internal";
 
@@ -49,4 +50,10 @@ it("syncs a bundle into the database", async () => {
   expect(await res.json()).toEqual({ courses: loaded.length });
   const rows = await db.select({ slug: courses.slug }).from(courses);
   expect(rows.map((r) => r.slug).sort()).toEqual(loaded.map((c) => c.slug).sort());
+
+  const [withHints] = await db
+    .select({ hints: lessons.hints })
+    .from(lessons)
+    .where(eq(lessons.slug, "moving-with-delta-time"));
+  expect(withHints?.hints).toHaveLength(3);
 });

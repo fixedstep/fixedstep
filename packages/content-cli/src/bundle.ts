@@ -1,4 +1,9 @@
-import { ChapterManifest, CourseManifest, LessonFrontmatter } from "@fixedstep/content-schema";
+import {
+  ChapterManifest,
+  CourseManifest,
+  LessonFrontmatter,
+  MAX_HINTS,
+} from "@fixedstep/content-schema";
 import { z } from "zod";
 import type { LoadedCourse } from "./load";
 
@@ -44,6 +49,9 @@ const BundleSchema = z.object({
                 visibleTests: NullableText,
                 hiddenTests: NullableText,
                 solution: NullableText,
+                // Defaulted so bundles from content repos on an older PLATFORM_REF still parse
+                // (their next sync clears any hints).
+                hints: z.array(z.string().min(1)).max(MAX_HINTS).default([]),
                 contentHash: z.string(),
               }),
             ),
