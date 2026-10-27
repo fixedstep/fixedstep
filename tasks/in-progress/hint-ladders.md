@@ -40,14 +40,17 @@ graduated help between "tests fail" and giving up.
 
 ## Acceptance criteria
 
-- [ ] `hints.md` is parsed, validated and synced; lessons without it behave as before.
-- [ ] The browser never receives a hint that hasn't been unlocked by server-counted failed
+- [x] `hints.md` is parsed, validated and synced; lessons without it behave as before.
+- [x] The browser never receives a hint that hasn't been unlocked by server-counted failed
       submissions; tests cover the API at 0, 1 and all-unlocked.
-- [ ] Hints, hidden tests, solutions and quiz answers don't leak through any lesson response.
+- [x] Hints, hidden tests, solutions and quiz answers don't leak through any lesson response.
 - [ ] The lesson page shows the hint panel and reveals unlocked hints; checked in `pnpm dev`,
       desktop and phone width.
-- [ ] `content-sample/` has one lesson with hints; `content:validate` passes.
-- [ ] Lint, typecheck and tests pass.
+      _Open: the manual check is the user's. `e2e/specs/hint-ladder.spec.ts` covers unlock,
+      reveal order, reload persistence and the 360px layout._
+- [x] `content-sample/` has one lesson with hints; `content:validate` passes (also passes on
+      the private content repo: 3 courses, 31 lessons).
+- [x] Lint, typecheck and tests pass.
 
 ## Plan
 
