@@ -94,6 +94,60 @@ test("the rating line fits at phone width", async ({ page }) => {
   expect(
     await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
   ).toBeLessThanOrEqual(0);
+
+  // The save feedback mustn't move the stars. The PUT is held, then answered here rather than
+  // by the server, so this test leaves the shared course rating alone for the test above.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(/\/api\/courses\/[^/]+\/rating$/, async (route) => {
+    await held;
+    await route.fulfill({ json: { average: null, count: 1, mine: 4 } });
+  });
+  const stars = bar.locator(".star-rating");
+  const status = bar.getByRole("status");
+  const at = async () => {
+    const b = await stars.boundingBox();
+    expect(
+      await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
+    ).toBeLessThanOrEqual(0);
+    return { x: b?.x, y: b?.y };
+  };
+  const before = await at();
+
+  await bar.getByRole("radio", { name: "Rate 1 out of 5" }).focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(status).toHaveText("Saving…");
+  expect(await at()).toEqual(before);
+
+  release();
+  await expect(status).toHaveText("Saved: you rated 4 out of 5");
+  expect(await at()).toEqual(before);
+
+  // "Saved" clears after 3 s.
+  await expect(status).toHaveText("", { timeout: 6000 });
+  expect(await at()).toEqual(before);
+});
+
+test("a failed save's message fits the status line on a wide screen", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await signUp(page.request);
+  const id = await lessonId(page.request, LESSONS.reading);
+  await completeLesson(page.request, id);
+  await page.route(/\/api\/courses\/[^/]+\/rating$/, (route) => route.fulfill({ status: 500 }));
+  await page.goto(`/lessons/${id}`);
+
+  const bar = page.getByRole("group", { name: "Course rating" });
+  const status = bar.getByRole("status");
+  const empty = await status.boundingBox();
+  await bar.getByRole("radio", { name: "Rate 2 out of 5" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(status).toHaveText("Couldn't save your rating. Try again.");
+  // Still one line: the reserved box hasn't grown.
+  expect((await status.boundingBox())?.height).toBe(empty?.height);
 });
 
 test("the bar shows the summary but no stars to a guest or a learner with no completed lesson", async ({

@@ -1302,7 +1302,8 @@ kbd {
   color: var(--bad);
 }
 /* In the lesson bar: wraps onto its own row when the bar is too narrow. The status keeps a
-   fixed width so "Saved: you rated 4 out of 5" appearing doesn't move anything. */
+   fixed width, wide enough for the longest message on one line, so text appearing doesn't
+   move anything. */
 .lesson-rating {
   display: flex;
   flex-wrap: wrap;
@@ -1316,13 +1317,17 @@ kbd {
   margin: 0;
 }
 .lesson-rating .rating-status {
-  flex: 0 0 13rem;
+  flex: 0 0 16rem;
 }
-/* Phones: the rating gets its own row, and the status a reserved line below the stars. */
+/* Phones: the rating gets its own row, and the stars a full-width row below the summary, so the
+   status line under them has a definite width and its text can't resize the stars' box. */
 @media (max-width: 600px) {
   .lesson-rating {
     flex-basis: 100%;
     margin-left: 0;
+  }
+  .lesson-rating .star-rating {
+    flex-basis: 100%;
   }
   .lesson-rating .rating-status {
     flex: 1 0 100%;
