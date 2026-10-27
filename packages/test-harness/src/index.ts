@@ -12,6 +12,9 @@ export type GradeRequest = {
   seed?: number;
 };
 
+/** Test hints longer than this are cut by grade(). */
+export const HINT_MAX_LENGTH = 300;
+
 /** Executes a program string in some sandbox and returns its final expression value. */
 export type Executor = (program: string) => Promise<string>;
 
@@ -68,11 +71,24 @@ export async function grade(req: GradeRequest, execute: Executor): Promise<Grade
   }
 
   let hiddenIndex = 0;
-  const results: TestResult[] = raw.results.map((r) =>
-    r.hidden
-      ? { name: `hidden test ${++hiddenIndex}`, passed: r.passed, hidden: true }
-      : { name: r.name, passed: r.passed, hidden: false, error: r.error },
-  );
+  const results: TestResult[] = raw.results.map((r) => {
+    // Hints are author text, so hidden tests get them too; their error stays omitted.
+    const hint = !r.passed && r.hint ? r.hint.slice(0, HINT_MAX_LENGTH) : undefined;
+    return r.hidden
+      ? {
+          name: `hidden test ${++hiddenIndex}`,
+          passed: r.passed,
+          hidden: true,
+          ...(hint ? { hint } : {}),
+        }
+      : {
+          name: r.name,
+          passed: r.passed,
+          hidden: false,
+          error: r.error,
+          ...(hint ? { hint } : {}),
+        };
+  });
   return done({ status: results.every((r) => r.passed) ? "passed" : "failed", results });
 }
 

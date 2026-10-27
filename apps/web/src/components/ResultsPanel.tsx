@@ -44,12 +44,18 @@ export function ResultsPanel({ local, server }: { local: Run | null; server: Run
               const l = find(local, name);
               const s = find(server, name);
               const error = (s && !s.passed && s.error) || (l && !l.passed && l.error);
+              const hint = (s && !s.passed && s.hint) || (l && !l.passed && l.hint);
               return (
                 <tr key={name}>
                   <th scope="row">
                     {name}
                     {s?.hidden && <span className="muted"> (hidden)</span>}
                     {error && <div className="muted test-error">{error}</div>}
+                    {hint && (
+                      <div className="test-hint">
+                        <span aria-hidden="true">💡</span> {hint}
+                      </div>
+                    )}
                   </th>
                   <Cell result={l} stale={local?.stale} />
                   <Cell result={s} stale={server?.stale} />
