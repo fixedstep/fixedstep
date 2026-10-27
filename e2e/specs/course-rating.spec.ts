@@ -95,3 +95,43 @@ test("the rating line fits at phone width", async ({ page }) => {
     await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
   ).toBeLessThanOrEqual(0);
 });
+
+test("the bar shows the summary but no stars to a guest or a learner with no completed lesson", async ({
+  page,
+}) => {
+  const id = await lessonId(page.request, LESSONS.reading);
+  const bar = page.getByRole("group", { name: "Course rating" });
+
+  await page.goto(`/lessons/${id}`);
+  await expect(bar.locator(".rating-summary")).toBeVisible();
+  await expect(bar.getByRole("radio")).toHaveCount(0);
+
+  // Signed in, but nothing completed yet: still not eligible to rate.
+  await signUp(page.request);
+  await page.goto(`/lessons/${id}`);
+  await expect(bar.locator(".rating-summary")).toBeVisible();
+  await expect(bar.getByRole("radio")).toHaveCount(0);
+});
+
+test("on the course's last lesson the completion card's stars sit alongside the bar's", async ({
+  page,
+}) => {
+  await signUp(page.request);
+  await completeLesson(page.request, await lessonId(page.request, LESSONS.reading));
+  await page.goto(`/lessons/${await lessonId(page.request, LESSONS.quiz)}`);
+
+  await page
+    .getByRole("radio", { name: "Movement speed stays the same regardless of frame rate" })
+    .check();
+  await page.getByRole("radio", { name: "Deterministic, reproducible simulation" }).check();
+  await page.getByRole("button", { name: "Submit answers" }).click();
+  await expect(page.getByRole("heading", { name: "Lesson complete" })).toBeVisible();
+
+  // Two widgets for one course, with separate radio names, so both stay operable.
+  await expect(page.getByRole("radio", { name: "Rate 3 out of 5" })).toHaveCount(2);
+  await expect(
+    page
+      .getByRole("group", { name: "Course rating" })
+      .getByRole("radio", { name: "Rate 3 out of 5" }),
+  ).toHaveCount(1);
+});
