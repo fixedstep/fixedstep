@@ -4,7 +4,9 @@ description: Take a task from tasks/todo/ through design, implementation, testin
 ---
 # Ship a task
 
-Argument: a task slug (`grader-overload-429`) or path. You are the lead: you run git and
+Argument: a task slug (`e2e-firefox`), a prefixed todo name (`2_e2e-firefox`) or a path. The
+slug is the file name without `.md` and without any `<n>_` priority prefix (`tasks/README.md`);
+the branch, commit prefixes and in-progress file all use it. You are the lead: you run git and
 coordinate the `designer`, `implementer`, `tester`, `course-tester` and `reviewer` agents. Pass
 each agent the task file path and what the previous step produced. They share no context with
 you or each other.
@@ -37,8 +39,11 @@ in their prompts.
 
 1. **Branch.** Check `git status` is clean. Run `git fetch origin` (and `git pull` if `main`
    may be stale) so `origin/main` is current.
-   `git switch --no-track -c <slug> main`. Move the task file from `tasks/todo/` to
-   `tasks/in-progress/`.
+   Find the task file: `tasks/todo/<n>_<slug>.md` (`n` is 1–5), or `tasks/todo/<slug>.md`
+   for a task added before the prefix convention. If none or several match, or the task is
+   already in `tasks/in-progress/`, ask the user.
+   `git switch --no-track -c <slug> main`, then
+   `git mv tasks/todo/<file> tasks/in-progress/<slug>.md` (the prefix is dropped).
 2. **Design.** Run `designer` on the task file. Read the plan it appends. If it defers acceptance
    criteria or proposes infra/cost changes, confirm the scope with the user before going on.
    Commit: `<slug>: plan`.
@@ -57,10 +62,11 @@ in their prompts.
    one-line summary of each finding with how it was resolved.
 6. **Finish the task file.** Tick the acceptance criteria that are met. For any left open (e.g.
    staging load tests), keep them unticked with a note. Move the file to `tasks/complete/` only
-   if every criterion is met; otherwise leave it in `in-progress/`. Commit. Then **always** run
-   `reviewer` again on the new HEAD, passing the previous approved SHA and its check results so
-   it can reuse them for a docs-only change. `APPROVE` goes to step 7. `CHANGES_REQUESTED` goes
-   back into step 5's loop (and step 6 runs again after it approves).
+   if every criterion is met; otherwise leave it in `in-progress/`. If remaining work is split
+   into a new `tasks/todo/` task, ask the user for its bucket and link it by slug. Commit. Then
+   **always** run `reviewer` again on the new HEAD, passing the previous approved SHA and its
+   check results so it can reuse them for a docs-only change. `APPROVE` goes to step 7.
+   `CHANGES_REQUESTED` goes back into step 5's loop (and step 6 runs again after it approves).
 
    **Round cap:** at most 3 `CHANGES_REQUESTED` verdicts in total across steps 5 and 6. After
    the third, stop and bring the open findings to the user. Approving rounds don't count.
