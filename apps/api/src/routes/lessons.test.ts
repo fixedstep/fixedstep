@@ -208,3 +208,124 @@ describe("hint ladder", () => {
     expect(JSON.parse(text).hintStatus).toEqual({ total: 3, unlocked: 0 });
   });
 });
+
+describe("hint ladder isolation and edges", () => {
+  const addUser = (id: string) => db.insert(user).values({ id, name: id, email: `${id}@test.dev` });
+
+  it("counts failures per user and per lesson", async () => {
+    await addUser("iso-a");
+    await addUser("iso-b");
+    gradeAs("failed");
+    await submit("iso-a");
+    await submit("iso-a");
+    expect(await statusOf(get(`/lessons/${lessonId}`, "iso-a"))).toEqual({
+      total: 3,
+      unlocked: 2,
+    });
+    expect(await statusOf(get(`/lessons/${lessonId}`, "iso-b"))).toEqual({
+      total: 3,
+      unlocked: 0,
+    });
+    expect(await hintsOf("iso-b")).toEqual({ total: 3, unlocked: 0, hints: [] });
+
+    // Failures on a different lesson don't unlock this one's hints.
+    const [other] = await db
+      .select({ id: lessons.id })
+      .from(lessons)
+      .where(eq(lessons.slug, "bouncing-ball"));
+    await entitlementsFor("iso-b");
+    await app.request(`/lessons/${other?.id}/submit`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-user": "iso-b" },
+      body: JSON.stringify({ code: "x" }),
+    });
+    expect(await hintsOf("iso-b")).toEqual({ total: 3, unlocked: 0, hints: [] });
+  });
+
+  it("only returns an unlocked prefix, even after the lesson is passed", async () => {
+    await addUser("iso-c");
+    const all = sampleHints() as string[];
+    gradeAs("passed");
+    await submit("iso-c");
+    expect((await hintsOf("iso-c")).hints).toEqual([]);
+    gradeAs("failed");
+    await submit("iso-c");
+    gradeAs("passed");
+    await submit("iso-c");
+    const body = await hintsOf("iso-c");
+    expect(body).toEqual({ total: 3, unlocked: 1, hints: all.slice(0, 1) });
+    const text = JSON.stringify(body);
+    expect(text).not.toContain(all[1] as string);
+    expect(text).not.toContain(all[2] as string);
+  });
+
+  it("has zero hints for lessons without hints.md", async () => {
+    const rows = await db.select().from(lessons).where(eq(lessons.slug, "bouncing-ball"));
+    const [reading] = await db
+      .select({ id: lessons.id })
+      .from(lessons)
+      .where(eq(lessons.kind, "reading"))
+      .limit(1);
+    for (const id of [rows[0]?.id, reading?.id]) {
+      const res = await get(`/lessons/${id}/hints`, "pro");
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ total: 0, unlocked: 0, hints: [] });
+      expect(await statusOf(get(`/lessons/${id}`, "pro"))).toEqual({ total: 0, unlocked: 0 });
+    }
+  });
+
+  it("answers 404 for unknown and malformed lesson ids", async () => {
+    for (const id of ["00000000-0000-0000-0000-000000000000", "nope", "1"]) {
+      const res = await get(`/lessons/${id}/hints`);
+      expect(res.status, id).toBe(404);
+      expect(await res.json()).toEqual({ error: "not found" });
+    }
+  });
+
+  it("returns no hint text with the 402 for a non-Pro user on a paid lesson", async () => {
+    const [paid] = await db
+      .select({ id: lessons.id, hints: lessons.hints })
+      .from(lessons)
+      .where(eq(lessons.slug, "bouncing-ball"));
+    await db
+      .update(lessons)
+      .set({ hints: ["PAID-SECRET"] })
+      .where(eq(lessons.id, paid?.id as string));
+    try {
+      await addUser("iso-d");
+      const res = await get(`/lessons/${paid?.id}/hints`, "iso-d");
+      expect(res.status).toBe(402);
+      const text = await res.text();
+      expect(text).not.toContain("PAID-SECRET");
+      expect(Object.keys(JSON.parse(text)).sort()).toEqual(["id", "locked", "title"]);
+      const pro = await get(`/lessons/${paid?.id}/hints`, "pro");
+      expect(pro.status).toBe(200);
+      expect(((await pro.json()) as LessonHints).hints).toEqual([]);
+    } finally {
+      await db
+        .update(lessons)
+        .set({ hints: paid?.hints ?? [] })
+        .where(eq(lessons.id, paid?.id as string));
+    }
+  });
+
+  it("rate limits the hints endpoint", async () => {
+    await addUser("iso-rl");
+    let limited = 0;
+    for (let i = 0; i < 70; i++) {
+      const res = await get(`/lessons/${lessonId}/hints`, "iso-rl");
+      if (res.status === 429) limited++;
+      else expect(res.status).toBe(200);
+    }
+    expect(limited).toBe(10);
+  });
+});
+
+const entitlementsFor = (id: string) =>
+  db.insert(entitlements).values({
+    userId: id,
+    kind: "pro",
+    provider: "test",
+    externalId: `sub_${id}`,
+    status: "active",
+  });

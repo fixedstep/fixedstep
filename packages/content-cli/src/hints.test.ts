@@ -42,4 +42,66 @@ describe("parseHints", () => {
     expect(parseHints("a\n---\n\n---\nc").empty).toEqual([2]);
     expect(parseHints("a\n---\n<!-- todo -->\n").empty).toEqual([2]);
   });
+
+  describe("edge cases", () => {
+    it("treats a file of only separators as empty hints", () => {
+      expect(parseHints("---\n---\n")).toEqual({ hints: ["", "", ""], empty: [1, 2, 3] });
+      expect(parseHints("---")).toEqual({ hints: ["", ""], empty: [1, 2] });
+    });
+
+    it("reports leading and trailing separators as empty hints", () => {
+      expect(parseHints("---\na")).toEqual({ hints: ["", "a"], empty: [1] });
+      expect(parseHints("a\n---\n")).toEqual({ hints: ["a", ""], empty: [2] });
+      expect(parseHints("a\n---\n\n  \n")).toEqual({ hints: ["a", ""], empty: [2] });
+    });
+
+    it("doesn't split inside indented fences", () => {
+      const md = "a\n  ```\n---\n  ```\nb\n---\nc";
+      expect(parseHints(md).hints).toEqual(["a\n  ```\n---\n  ```\nb", "c"]);
+    });
+
+    it("needs a closing fence of the same character and at least the same length", () => {
+      // ~~~ doesn't close a ``` fence, and a shorter run doesn't either.
+      expect(parseHints("```\n~~~\n---\n~~~\n```\n---\nx").hints).toEqual([
+        "```\n~~~\n---\n~~~\n```",
+        "x",
+      ]);
+      expect(parseHints("````\n```\n---\n````\n---\nx").hints).toEqual([
+        "````\n```\n---\n````",
+        "x",
+      ]);
+    });
+
+    it("keeps everything after an unclosed fence in the same hint", () => {
+      expect(parseHints("a\n```\n---\nb").hints).toEqual(["a\n```\n---\nb"]);
+    });
+
+    it("splits on --- directly after a closing fence", () => {
+      expect(parseHints("```\nx\n```\n---\ny").hints).toEqual(["```\nx\n```", "y"]);
+    });
+
+    it("ignores a separator-looking line inside a multi-line comment", () => {
+      expect(parseHints("a\n<!--\n---\n-->\nb").hints).toEqual(["a\nb"]);
+      expect(parseHints("a\n<!-- x\n---\ny -->\n---\nb").hints).toEqual(["a", "b"]);
+    });
+
+    it("drops an unterminated comment to the end of the file", () => {
+      expect(parseHints("a\n<!-- never closed\n---\nb").hints).toEqual(["a"]);
+    });
+
+    it("keeps a --- that follows a comment on the same line as a separator", () => {
+      expect(parseHints("a\n---<!-- c -->\nb").hints).toEqual(["a", "b"]);
+    });
+
+    it("handles bare CR line endings and CRLF inside fences", () => {
+      expect(parseHints("a\r---\rb").hints).toEqual(["a", "b"]);
+      expect(parseHints("```\r\n---\r\n```\r\n---\r\nb").hints).toEqual(["```\n---\n```", "b"]);
+    });
+
+    it("preserves unicode and non-ASCII whitespace", () => {
+      expect(parseHints("héllo 日本語 🎮\n---\nΩ").hints).toEqual(["héllo 日本語 🎮", "Ω"]);
+      // A non-breaking space after --- isn't a trailing space/tab, so no split.
+      expect(parseHints("a\n---\u00a0\nb").hints).toHaveLength(1);
+    });
+  });
 });

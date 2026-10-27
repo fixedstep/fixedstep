@@ -12,6 +12,7 @@ import { createTestDb } from "@fixedstep/db/testing";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { deleteStaleGuests, mergeGuestProgress } from "./guests";
+import { hintStatus } from "./hints";
 import { getStats } from "./progress";
 
 let db: Awaited<ReturnType<typeof createTestDb>>;
@@ -119,6 +120,40 @@ describe("mergeGuestProgress", () => {
     // Better Auth deletes the guest next; nothing of theirs may be left to cascade away.
     await db.delete(user).where(eq(user.id, "guest"));
     expect((await getStats(db, "member")).xp).toBe(25);
+  });
+});
+
+describe("mergeGuestProgress and hints", () => {
+  it("carries failed-submission counts so unlocked hints survive sign-up", async () => {
+    await addUser("guest2", true);
+    await addUser("member2");
+    await db.insert(submissions).values(
+      [0, 1].map(() => ({
+        userId: "guest2",
+        lessonId: lessonA,
+        contentHash: "a",
+        status: "failed" as const,
+        result: {},
+      })),
+    );
+    await db.insert(submissions).values({
+      userId: "member2",
+      lessonId: lessonA,
+      contentHash: "a",
+      status: "error",
+      result: {},
+    });
+    await mergeGuestProgress(db, "guest2", "member2");
+    await db.delete(user).where(eq(user.id, "guest2"));
+    const rows = await db.select().from(submissions).where(eq(submissions.userId, "member2"));
+    expect(rows.filter((r) => r.status !== "passed")).toHaveLength(3);
+    expect(
+      await hintStatus(db as never, "member2", { id: lessonA, hints: ["a", "b", "c", "d"] }),
+    ).toEqual({
+      total: 4,
+      unlocked: 3,
+    });
+    await db.delete(user).where(eq(user.id, "member2"));
   });
 });
 

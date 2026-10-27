@@ -274,3 +274,18 @@ describe("rating aggregates", () => {
     expect((await outline(null, "a")).rating).toEqual({ average: 4.3, count: 3, mine: null });
   });
 });
+
+describe("hint text", () => {
+  it("never appears in the course list", async () => {
+    await db
+      .update(lessons)
+      .set({ hints: ["SECRET-HINT-ONE", "SECRET-HINT-TWO"] })
+      .where(eq(lessons.id, ids["a-lesson"] as string));
+    for (const u of [null, "member"]) {
+      const res = await app.request("/courses", { headers: headers(u) });
+      const text = await res.text();
+      expect(text).not.toContain("SECRET-HINT");
+      expect(text).not.toContain("hints");
+    }
+  });
+});
