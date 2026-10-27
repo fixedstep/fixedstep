@@ -1,9 +1,9 @@
-# Analytics: product usage, learning metrics, and ops/errors
+# Analytics: product usage and learning metrics
 
-**Area:** `apps/web`, `apps/api`, `packages/db`, `infra/` (if a hosted or self-hosted tool is
-picked).
+**Area:** `apps/web`, `apps/api`, `packages/content-cli`, `infra/` (config/env only).
 **Depends on:** nothing.
-**Origin:** user request (2026-10-27): there's no analytics of any kind yet.
+**Origin:** user request (2026-10-27): there's no analytics of any kind yet. Error and latency
+tracking was split out into task `error-tracking`.
 
 ## Problem
 
@@ -15,42 +15,50 @@ Nothing tells us how the platform is used or whether it's working for learners:
   already hold most of the raw data (attempts, passes, completions), but nothing aggregates it.
   Authors can't see which lessons people drop off at, which take the most attempts, or how
   often hints are unlocked.
-- **Ops/errors:** frontend exceptions (including `sim` preview worker crashes) and API
-  errors and latency only show up in the cloud provider's logs, if at all.
+
+## Decisions (user, 2026-10-27)
+
+- **Product analytics: hosted PostHog, cookies off** (`persistence: "memory"` or equivalent,
+  so no consent banner is needed). It has funnels and retention, and its free tier (about 1M
+  events/mo when checked) covers current traffic. Hosted Plausible is the fallback if only
+  page views and a basic funnel are wanted. Self-hosting was ruled out: PostHog self-hosted needs
+  ClickHouse and Kafka, and the only light option (Umami on Postgres) means adding a service to
+  both the GCP and AWS stacks.
+- **Learning metrics: built in-house** from the existing tables. No third-party tool, so we
+  don't duplicate data we already have or send lesson internals out.
+- Recheck PostHog's pricing and free tier before starting; the figures above are from memory.
 
 ## Suggested approach
 
-Three parts that can ship separately; the designer may split them into their own tasks.
-
-1. **Product analytics.** Pick a privacy-friendly tool that needs no cookie banner (e.g.
-   Plausible, Umami or PostHog with cookies off; self-hosted vs. hosted is a cost/infra choice
-   for the user). Track page views plus a few named events: sign-up, verified email, course
-   start, lesson complete, checkout started/completed. Load it from config so local, e2e and
-   staging can turn it off or point elsewhere. Keep the app cloud-neutral (a script tag/HTTP
-   endpoint, not a cloud SDK).
-2. **Learning metrics.** Server-side aggregates from the existing tables (no new client
-   tracking needed): per lesson, starts, completions, median attempts to pass, hint unlocks,
+1. **Product analytics (PostHog).**
+   - Config: a public project key and host (EU or US region) passed to the web app at build or
+     runtime config. Unset means off, which is the default for local, e2e and CI. Staging and
+     prod each get their own PostHog project. Add the values to `infra/src/app-spec.ts` so both
+     cloud targets set them. No cloud SDKs; the PostHog JS snippet/library isn't a cloud SDK.
+   - Track page views (SPA route changes) and named events: sign-up, email verified, course
+     start, lesson complete, checkout started, checkout completed. Fire checkout completed from
+     the confirmed state the app already has, not optimistically.
+   - Identify signed-in users by an opaque id only: no email or name. Guests stay anonymous.
+   - Optional: proxy through our own domain so ad blockers don't drop events.
+2. **Learning metrics (in-house).** Server-side aggregates from existing tables, with no new
+   client tracking: per lesson, starts, completions, median attempts to pass, hint unlocks, and
    drop-off between consecutive lessons; per course, completion rate and ratings. Expose them
    to authors, e.g. a `content-cli` command against a stage's DB or an admin-only API route.
-   Admin responses must still never include `hiddenTests`, `solution` or quiz `answer`s.
-3. **Ops/errors.** Frontend error reporting (window errors, unhandled rejections, worker
-   errors) and API error/latency metrics, with PII scrubbed. Prefer something that works the
-   same on the GCP and AWS targets (e.g. Sentry or an OpenTelemetry exporter configured from
-   env), wired through `infra/src/app-spec.ts`.
+   Admin responses still never include `hiddenTests`, `solution` or quiz `answer`s.
 
 ## Open questions for the user
 
-- Hosted vs. self-hosted for each part, and the monthly budget.
-- Whether anonymous (guest) learners are counted, and the retention period for event data.
-- Does the privacy policy or terms need updating?
+- PostHog region (EU vs US).
+- Whether guest learners are counted, and the event retention period.
+- Privacy policy/terms update to name PostHog as a processor.
 
 ## Acceptance criteria
 
-- [ ] Product analytics: page views and the named funnel events are recorded on staging and
-      prod, are off in local/e2e by default, and set no cookies that need consent.
+- [ ] Product analytics: page views and the named funnel events reach the stage's PostHog
+      project on staging and prod; analytics is off when the key is unset (local, e2e, CI), and
+      no cookies or local storage that need consent are set.
+- [ ] No email, name or other PII is sent to PostHog; users are identified by an opaque id.
 - [ ] Learning metrics: per-lesson and per-course aggregates are available to authors for a
       chosen stage, computed from existing tables, and covered by tests.
-- [ ] Ops/errors: a thrown frontend error and a 500 from the API both show up in the chosen
-      tool on staging, with no PII in the payload.
-- [ ] Any new infra lands in both the GCP and AWS targets, and its cost is recorded in the
+- [ ] Config lands in both the GCP and AWS targets, and the PostHog plan/cost is recorded in the
       README.
