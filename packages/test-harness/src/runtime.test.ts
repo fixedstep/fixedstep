@@ -125,3 +125,75 @@ it("QuickJS kills infinite loops", async () => {
   expect(r.status).toBe("error");
   expect(r.error).toMatch(/Timed out/);
 });
+
+describe.each([
+  ["Function", functionExecutor],
+  ["QuickJS", quickjsExecutor({ timeoutMs: 500 })],
+])("hint edge cases via %s", (_name, exec) => {
+  it("round-trips quotes, newlines, backslashes and unicode", async () => {
+    const hint = `Don't "quote"\nnew\\line   \u{1F4A1} café`;
+    const tests = visibleWithOpts(`{ hint: ${JSON.stringify(hint)} }`);
+    const r = await grade({ code: bad, visibleTests: tests }, exec);
+    expect(r.results[0]?.hint).toBe(hint);
+  });
+
+  it("reports a hint when the test throws a non-assertion error", async () => {
+    const tests = `
+import { test } from "@fixedstep/harness";
+test("boom", () => { throw new Error("kaput"); }, { hint: "check your return value" });
+`;
+    const r = await grade({ code: good, visibleTests: tests }, exec);
+    expect(r.results[0]).toMatchObject({
+      passed: false,
+      error: "kaput",
+      hint: "check your return value",
+    });
+  });
+
+  it("keeps hints attached to the right test in a mixed run, hidden indices in order", async () => {
+    const tests = `
+import { test, expect } from "@fixedstep/harness";
+test("a", () => { expect(1).toBe(2); }, { hint: "hint a" });
+test("b", () => { expect(1).toBe(1); }, { hint: "hint b" });
+test("c", () => { expect(1).toBe(2); });
+`;
+    const hidden = `
+import { test, expect } from "@fixedstep/harness";
+test("h1", () => { expect(1).toBe(2); }, { hint: "hidden one" });
+test("h2", () => { expect(1).toBe(2); });
+test("h3", () => { expect(1).toBe(2); }, { hint: "hidden three" });
+`;
+    const r = await grade({ code: good, visibleTests: tests, hiddenTests: hidden }, exec);
+    expect(r.results.map((t) => [t.name, t.hint])).toEqual([
+      ["a", "hint a"],
+      ["b", undefined],
+      ["c", undefined],
+      ["hidden test 1", "hidden one"],
+      ["hidden test 2", undefined],
+      ["hidden test 3", "hidden three"],
+    ]);
+    expect(r.results[1]).not.toHaveProperty("hint");
+    for (const t of r.results.slice(3)) expect(t).not.toHaveProperty("error");
+  });
+
+  it("does not cut a hint of exactly the max length", async () => {
+    const exact = "y".repeat(HINT_MAX_LENGTH);
+    const r = await grade(
+      { code: bad, visibleTests: visibleWithOpts(`{ hint: "${exact}" }`) },
+      exec,
+    );
+    expect(r.results[0]?.hint).toBe(exact);
+  });
+
+  it("ignores a hint on opts that is a non-string object or array", async () => {
+    const r = await grade({ code: bad, visibleTests: visibleWithOpts(`{ hint: ["a"] }`) }, exec);
+    expect(r.results[0]).not.toHaveProperty("hint");
+  });
+
+  it("does not break loading when opts.hint is a throwing getter", async () => {
+    const opts = `{ get hint(): string { throw new Error("hostile"); } }`;
+    const r = await grade({ code: bad, visibleTests: visibleWithOpts(opts) }, exec);
+    expect(r.status).toBe("failed");
+    expect(r.results[0]).toMatchObject({ name: "moves right", passed: false });
+  });
+});
