@@ -6,9 +6,11 @@ import {
   CourseManifest,
   LESSON_FILES,
   LessonFrontmatter,
+  MAX_HINTS,
 } from "@fixedstep/content-schema";
 import { parse as parseYaml } from "yaml";
 import type { z } from "zod";
+import { parseHints } from "./hints";
 
 export type LoadedLesson = LessonFrontmatter & {
   path: string;
@@ -17,6 +19,8 @@ export type LoadedLesson = LessonFrontmatter & {
   visibleTests: string | null;
   hiddenTests: string | null;
   solution: string | null;
+  /** Server-only. Empty when the lesson has no hints.md. */
+  hints: string[];
   contentHash: string;
 };
 export type LoadedChapter = ChapterManifest & { lessonsLoaded: LoadedLesson[] };
@@ -58,11 +62,12 @@ async function loadLesson(dir: string, dirName: string): Promise<LoadedLesson> {
   const fm = parseWith(LessonFrontmatter, m[1] ?? "", `${dir}/${LESSON_FILES.body}`);
   if (fm.slug !== dirName) throw new ContentError(`${dir}: slug "${fm.slug}" != directory name`);
 
-  const [starterCode, visibleTests, hiddenTests, solution] = await Promise.all([
+  const [starterCode, visibleTests, hiddenTests, solution, hintsRaw] = await Promise.all([
     readOptional(join(dir, LESSON_FILES.starter)),
     readOptional(join(dir, LESSON_FILES.visibleTests)),
     readOptional(join(dir, LESSON_FILES.hiddenTests)),
     readOptional(join(dir, LESSON_FILES.solution)),
+    readOptional(join(dir, LESSON_FILES.hints)),
   ]);
   const needsCode = fm.kind === "code" || fm.kind === "sim";
   if (needsCode && (!starterCode || !visibleTests || !solution)) {
@@ -71,11 +76,26 @@ async function loadLesson(dir: string, dirName: string): Promise<LoadedLesson> {
     );
   }
 
+  const where = `${dir}/${LESSON_FILES.hints}`;
+  if (hintsRaw !== null && !needsCode) {
+    throw new ContentError(`${where}: hints are only for code/sim lessons`);
+  }
+  const { hints, empty, unclosedComment } = parseHints(hintsRaw ?? "");
+  if (unclosedComment !== undefined) {
+    throw new ContentError(`${where}: comment opened on line ${unclosedComment} is never closed`);
+  }
+  if (empty.length > 0) throw new ContentError(`${where}: hint ${empty[0]} is empty`);
+  if (hints.length > MAX_HINTS) {
+    throw new ContentError(`${where}: at most ${MAX_HINTS} hints (found ${hints.length})`);
+  }
+
   const hash = createHash("sha256");
   for (const part of [raw, starterCode, visibleTests, hiddenTests, solution]) {
     hash.update(part ?? "\0");
     hash.update("\x1f");
   }
+  // Only when present, so lessons without hints keep their existing hashes.
+  if (hintsRaw !== null) hash.update(hintsRaw);
   return {
     ...fm,
     path: dir,
@@ -84,6 +104,7 @@ async function loadLesson(dir: string, dirName: string): Promise<LoadedLesson> {
     visibleTests,
     hiddenTests,
     solution,
+    hints,
     contentHash: hash.digest("hex").slice(0, 16),
   };
 }

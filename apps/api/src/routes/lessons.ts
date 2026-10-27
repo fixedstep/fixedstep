@@ -1,5 +1,6 @@
 import {
   type GradeResult,
+  type LessonHints,
   type LockedLesson,
   type PublicLesson,
   type QuizFeedback,
@@ -13,6 +14,7 @@ import { z } from "zod";
 import { type AppEnv, clientKey, type Deps } from "../context";
 import { hasPro } from "../lib/entitlements";
 import { GraderBusyError } from "../lib/grader";
+import { hintStatus } from "../lib/hints";
 import { completeLesson, getStats } from "../lib/progress";
 import { gradeQuiz } from "../lib/quiz";
 import { createRateLimiter } from "../lib/rate-limit";
@@ -82,8 +84,28 @@ export function lessonRoutes({ db, grader }: Deps) {
       hasHiddenTests: Boolean(lesson.hiddenTests),
       quiz: lesson.quiz?.map(({ id, prompt, options }) => ({ id, prompt, options })) ?? null,
       completed,
+      hintStatus: await hintStatus(db, user?.id, lesson),
     };
     return c.json(body);
+  });
+
+  r.get("/lessons/:id/hints", async (c) => {
+    const user = c.get("user");
+    if (!readLimit(clientKey(user, c.req.raw.headers))) return c.json({ error: "slow down" }, 429);
+
+    const lesson = await findLesson(c.req.param("id"));
+    if (!lesson) return c.json({ error: "not found" }, 404);
+    if (lesson.access === "paid" && !(await hasPro(db, user?.id))) {
+      return c.json(
+        { id: lesson.id, title: lesson.title, locked: true } satisfies LockedLesson,
+        402,
+      );
+    }
+
+    const { total, unlocked } = await hintStatus(db, user?.id, lesson);
+    // The only place hint text leaves the server: never more than the unlocked prefix.
+    const hints = lesson.hints.slice(0, unlocked);
+    return c.json({ total, unlocked, hints } satisfies LessonHints);
   });
 
   r.post("/lessons/:id/submit", async (c) => {
@@ -148,7 +170,14 @@ export function lessonRoutes({ db, grader }: Deps) {
     const passed = grade.status === "passed";
     const xpAwarded = passed ? await completeLesson(db, user.id, lesson) : 0;
     const streak = passed ? (await getStats(db, user.id)).streak : undefined;
-    return c.json({ grade, xpAwarded, completed: passed, streak, quiz } satisfies SubmitResponse);
+    return c.json({
+      grade,
+      xpAwarded,
+      completed: passed,
+      streak,
+      quiz,
+      hintStatus: await hintStatus(db, user.id, lesson),
+    } satisfies SubmitResponse);
   });
 
   return r;

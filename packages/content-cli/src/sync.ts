@@ -59,6 +59,7 @@ export async function syncContent(db: Db, loaded: LoadedCourse[]) {
             visibleTests: l.visibleTests,
             hiddenTests: l.hiddenTests,
             solution: l.solution,
+            hints: l.hints,
             quiz: l.quiz ?? null,
             contentHash: l.contentHash,
             archivedAt: null,

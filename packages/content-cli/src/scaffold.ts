@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { LESSON_FILES, type LessonKind, Slug } from "@fixedstep/content-schema";
+import { LESSON_FILES, type LessonKind, MAX_HINTS, Slug } from "@fixedstep/content-schema";
 import { isScalar, isSeq, parseDocument } from "yaml";
 import { ContentError } from "./load";
 
@@ -88,6 +88,17 @@ chapters:
   return written;
 }
 
+/** Comment-only, so it loads as "no hints" until the author writes some. */
+const HINTS_SCAFFOLD = `<!--
+Hints: optional, server-only. Write 1–${MAX_HINTS} hints, ordered from a nudge to nearly the
+answer, with a line containing only --- between them. Hint n unlocks after n failed
+submissions, and the learner clicks to reveal each one. Markdown and fenced code are allowed
+(--- inside a fence doesn't split); use *** for a horizontal rule and "## Heading" for headings.
+The last hint may come close to the answer but shouldn't be the solution code.
+Delete this file if the lesson has no hints.
+-->
+`;
+
 function lessonFiles(slug: string, kind: LessonKind): Record<string, string> {
   const front = (extra = "") =>
     `---\nslug: ${slug}\ntitle: ${titleFrom(slug)}\nkind: ${kind}\naccess: paid\nxp: ${kind === "sim" ? 25 : 10}\n${extra}---\n\n`;
@@ -126,6 +137,7 @@ test("adds two numbers", () => {
   expect(add(2, 3)).toBe(5);
 });
 `,
+        [LESSON_FILES.hints]: HINTS_SCAFFOLD,
       };
     case "sim": {
       const game = (update: string) => `export const WIDTH = 320;
@@ -160,6 +172,7 @@ test("moves right over one second", () => {
   expect(s.x).toBeCloseTo(60);
 });
 `,
+        [LESSON_FILES.hints]: HINTS_SCAFFOLD,
       };
     }
   }
