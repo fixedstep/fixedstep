@@ -13,6 +13,7 @@ branch, and `/ship-task` takes it. Starting a task moves `todo/<n>_<slug>.md` to
 `in-progress/<slug>.md`, dropping the prefix.
 
 - **New task:** the user picks its bucket.
-- **Reprioritise:** rename that one file (`git mv todo/4_x.md todo/2_x.md`). Nothing else changes.
+- **Reprioritise:** rename that one file, from the repo root
+  (`git mv tasks/todo/4_x.md tasks/todo/2_x.md`). Nothing else changes.
 - **Linking:** refer to todo tasks by slug (`` `e2e-firefox` ``), not by path, because the
   prefix can change.

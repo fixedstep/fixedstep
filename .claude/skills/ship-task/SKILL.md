@@ -62,11 +62,13 @@ in their prompts.
    one-line summary of each finding with how it was resolved.
 6. **Finish the task file.** Tick the acceptance criteria that are met. For any left open (e.g.
    staging load tests), keep them unticked with a note. Move the file to `tasks/complete/` only
-   if every criterion is met; otherwise leave it in `in-progress/`. If remaining work is split
-   into a new `tasks/todo/` task, ask the user for its bucket and link it by slug. Commit. Then
-   **always** run `reviewer` again on the new HEAD, passing the previous approved SHA and its
-   check results so it can reuse them for a docs-only change. `APPROVE` goes to step 7.
-   `CHANGES_REQUESTED` goes back into step 5's loop (and step 6 runs again after it approves).
+   if every criterion is met; otherwise leave it in `in-progress/`, or, if the user agrees, split
+   the remaining work into a new `tasks/todo/` task (ask the user for its bucket, link it by
+   slug, mark each open criterion "Moved to task `<new-slug>`") and move this file to
+   `tasks/complete/`. Commit. Then **always** run `reviewer` again on the new HEAD, passing the
+   previous approved SHA and its check results so it can reuse them for a docs-only change.
+   `APPROVE` goes to step 7. `CHANGES_REQUESTED` goes back into step 5's loop (and step 6 runs
+   again after it approves).
 
    **Round cap:** at most 3 `CHANGES_REQUESTED` verdicts in total across steps 5 and 6. After
    the third, stop and bring the open findings to the user. Approving rounds don't count.

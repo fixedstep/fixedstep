@@ -54,15 +54,19 @@ One task (`email-provider-setup`) has sat in `in-progress/` since before 2026-10
 
 ## Acceptance criteria
 
-- [ ] Every file in `tasks/todo/` is named `<1–5>_<slug>.md`, with buckets as in the table.
-- [ ] No reference to an old todo path remains in `tasks/`, `CLAUDE.md`, `README.md` or `.claude/`.
-- [ ] `tasks/README.md` documents the convention; CLAUDE.md links to it and says the slug
+- [x] Every file in `tasks/todo/` is named `<1–5>_<slug>.md`, with buckets as in the table.
+      _Plus `2_email-delivery-checks` (bucket 2, the user's choice), split out of
+      `email-provider-setup`._
+- [x] No reference to an old todo path remains in `tasks/`, `CLAUDE.md`, `README.md` or `.claude/`.
+- [x] `tasks/README.md` documents the convention; CLAUDE.md links to it and says the slug
       excludes the prefix.
-- [ ] `/ship-task` step 1 handles prefixed todo files: the branch and the in-progress file use
-      the plain slug.
-- [ ] `email-provider-setup` is completed, or its remaining work is split out or explained, as
-      agreed with the user.
-- [ ] Lint passes (docs-only change).
+- [x] `/ship-task` step 1 handles prefixed todo files: the branch and the in-progress file use
+      the plain slug. _Step 6 also describes splitting leftover work into a new todo task and
+      completing the original (review finding)._
+- [x] `email-provider-setup` is completed, or its remaining work is split out or explained, as
+      agreed with the user. _Completed with criteria 1, 2 and 4 moved to task
+      `email-delivery-checks`; the user's answers are recorded in the task file._
+- [x] Lint passes (docs-only change).
 
 ## Plan
 
