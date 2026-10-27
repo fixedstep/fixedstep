@@ -77,30 +77,44 @@ stage gets its own key/project, and how the provider reports bounces and complai
 ## Acceptance criteria
 
 - [ ] Provider chosen, with the reason and expected cost noted here.
-      *Open:* Postmark chosen 2026-10-22 (reason in the Plan); the cost (staging free tier?,
-      prod ~$15/mo) still needs verifying at sign-up (manual step 1).
+      Postmark chosen 2026-10-22 (reason in the Plan). *Moved to task `email-delivery-checks`:*
+      the Postmark plan and monthly cost were never recorded.
 - [ ] Sending domains verified (SPF, DKIM, DMARC pass) for `staging.fixedstep.com` and
       `fixedstep.com`, and the records documented in `README.md`.
-      *Open:* records documented in README "Email setup (per stage)" (Cloudflare DNS, `pm_bounces`
+      Records documented in README "Email setup (per stage)" (Cloudflare DNS, `pm_bounces`
       Return-Path, Email Routing inbox). DKIM and Return-Path verified in Postmark for both
-      domains on 2026-10-22; confirm SPF/DKIM/DMARC `pass` in a delivered message's headers.
-- [ ] `SMTP_URL` and `emailFrom` set on the active staging and prod stacks. `pulumi up` prints no
+      domains on 2026-10-22. *Moved to task `email-delivery-checks`:* SPF/DKIM/DMARC `pass` in a
+      delivered message's headers hasn't been checked.
+- [x] `SMTP_URL` and `emailFrom` set on the active staging and prod stacks. `pulumi up` prints no
       `SMTP_URL/emailFrom not set` warning (it's a Pulumi warning, not an API log line).
-      *Open:* set on `aws-staging` and `aws-prod` (committed yaml, plus `emailReplyTo`).
+      Set on `aws-staging` and `aws-prod` (committed yaml, plus `emailReplyTo`).
       Staging: the CI deploy after the `email-secrets` merge ran with no warning, and its task definition has
       `EMAIL_PROVIDER=smtp`, `EMAIL_FROM`, `EMAIL_REPLY_TO` and `EMAIL_SUBJECT_PREFIX=[staging]`.
-      Prod: tick after the next `v*` deploy runs without the warning.
+      Prod: a deploy has run since the email config landed, with no warning (user, 2026-10-27).
+      The `gcp-*` stacks were never deployed, so they aren't active.
 - [ ] Sign-up verification and password reset emails arrive in an inbox (not spam) on both
       staging and prod. Staging emails are clearly marked as staging.
-      *Open:* staging sign-up verification arrived on 2026-10-22 (to `test@staging.fixedstep.com`
-      via Cloudflare Email Routing) with a `[staging] …` subject. Still to do: staging password
-      reset, prod sign-up and reset, and Gmail/Outlook inbox placement. Until Postmark approves
-      the account it only delivers to the From address's own domain. The `email:test` run
-      confirmed the script's CLI entry guard.
+      Staging sign-up verification arrived on 2026-10-22 (to `test@staging.fixedstep.com`
+      via Cloudflare Email Routing) with a `[staging] …` subject, and mail reaches the user's
+      own-domain addresses. Postmark has approved the account (2026-10-27), so delivery outside
+      the From domain is no longer blocked. *Moved to task `email-delivery-checks`:* staging and
+      prod password reset, prod sign-up, and Gmail/Outlook inbox placement are untested.
 - [x] No cloud SDK or cloud-specific email code in `apps/` or `infra/src/<cloud>/`. Both cloud
       targets get email from the same `app-spec.ts` path.
 - [x] `Pulumi.aws-*.yaml` `emailFrom` placement fixed.
 - [x] Unit tests cover any new app code (subject prefix, transport timeouts, test-send script).
+
+Status check with the user (2026-10-27, `groom-backlog`):
+1. Postmark is in use; the plan and monthly cost weren't stated.
+2. Postmark has approved the account (out of test mode).
+3. SPF/DKIM/DMARC "should be passing" but haven't been checked in a delivered message.
+4. A prod deploy has run since the email config landed, with no `SMTP_URL/emailFrom not set`
+   warning.
+5. The GCP stacks were never deployed and GCP isn't in use, so GCP-only config doesn't apply.
+6. Mail arrives at the user's own-domain addresses. Gmail/Outlook delivery and password reset
+   (staging and prod) haven't been tested.
+
+The cost, the header check and the delivery tests moved to task `email-delivery-checks`.
 
 ## Plan
 

@@ -75,7 +75,7 @@ one after another, so requests **queue inside the process**. Under a burst:
       connection reset (e.g. an interrupted Spot task) is retried once.
 
 Infra capacity changes, the cost write-up, the live AWS burst/Spot check and the staging load
-tests moved to `tasks/todo/grader-capacity-tuning.md`.
+tests moved to task `grader-capacity-tuning`.
 
 ## Plan
 
@@ -89,7 +89,7 @@ Covered on this branch (app-level, cloud-neutral):
 - The grader bounds its own queue and returns 429; a connection reset or per-attempt timeout is
   retried once while the deadline allows (the app half of AC 6).
 
-**Moved to `tasks/todo/grader-capacity-tuning.md`:** suggested-approach items 3 and 6, the cost
+**Moved to task `grader-capacity-tuning`:** suggested-approach items 3 and 6, the cost
 write-up, the staging load tests, and the live AWS burst/Spot check. No `infra/` or app-spec edits
 on this branch.
 

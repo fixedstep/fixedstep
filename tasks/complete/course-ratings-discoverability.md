@@ -66,7 +66,7 @@ UI on a fresh database.
 > the stars and the save text appears, right-aligned, in a slot to the left of the summary. The
 > slot is `padding-left` on `.lesson-rating.can-rate` (only when the learner can rate) with the
 > status absolutely positioned in it, so its text never affects the group's width in any engine.
-> Phone layout unchanged. Follow-up: `tasks/todo/e2e-firefox.md`.
+> Phone layout unchanged. Follow-up: task `e2e-firefox`.
 
 **Flags:** web-only. No API, DTO (`@fixedstep/content-schema`), DB, app-spec or infra changes, so
 nothing changes in `infra/src/gcp` or `infra/src/aws` and there's no cost impact. Nothing is
