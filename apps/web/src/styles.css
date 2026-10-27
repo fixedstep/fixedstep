@@ -1038,8 +1038,10 @@ kbd {
 .lesson-bar {
   grid-area: bar;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  row-gap: 6px;
   min-width: 0;
 }
 .outline-toggle {
@@ -1047,6 +1049,8 @@ kbd {
   font-size: 14px;
 }
 .breadcrumb {
+  /* Shrinks and wraps beside the toggle rather than dropping to its own row. */
+  flex: 1 1 12rem;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1296,6 +1300,34 @@ kbd {
 }
 .rating-status.error {
   color: var(--bad);
+}
+/* In the lesson bar: wraps onto its own row when the bar is too narrow. The status keeps a
+   fixed width so "Saved: you rated 4 out of 5" appearing doesn't move anything. */
+.lesson-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 10px;
+  margin-left: auto;
+  min-width: 0;
+}
+.lesson-rating .rating-summary,
+.lesson-rating .star-rating {
+  margin: 0;
+}
+.lesson-rating .rating-status {
+  flex: 0 0 13rem;
+}
+/* Phones: the rating gets its own row, and the status a reserved line below the stars. */
+@media (max-width: 600px) {
+  .lesson-rating {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .lesson-rating .rating-status {
+    flex: 1 0 100%;
+    margin-left: 0;
+  }
 }
 .completion-rate {
   margin: 12px 0 0;

@@ -1,4 +1,4 @@
-import type { LessonKind } from "@fixedstep/content-schema";
+import type { CourseOutline, LessonKind } from "@fixedstep/content-schema";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
@@ -43,6 +43,7 @@ export function LessonShell({ lessonId, children }: { lessonId: string; children
           <span aria-hidden>›</span>
           <span aria-current="page">{ctx.chapter.title}</span>
         </nav>
+        <BarRating course={ctx.course} />
       </div>
       {open && (
         <button
@@ -62,6 +63,22 @@ export function LessonShell({ lessonId, children }: { lessonId: string; children
   );
 }
 
+/**
+ * The course rating in the always-visible bar: the summary for everyone, the stars for a learner
+ * who may rate. Keyed by slug so moving to another course's lesson doesn't carry the widget's
+ * unsent state (or its debounced PUT) over to the new course.
+ */
+function BarRating({ course }: { course: CourseOutline }) {
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: not a form group; a fieldset would wrap the stars' own fieldset and resist shrinking
+    <div className="lesson-rating" role="group" aria-label="Course rating">
+      <RatingSummary rating={course.rating} emptyText="Not enough ratings yet" />
+      {rateAccess(me.data, course) === "rate" && <StarRating key={course.slug} course={course} />}
+    </div>
+  );
+}
+
 function Outline({ ctx, hidden }: { ctx: LessonContext; hidden: boolean }) {
   const lessons = ctx.course.chapters.flatMap((ch) => ch.lessons);
   const done = lessons.filter((l) => l.completed).length;
@@ -74,8 +91,6 @@ function Outline({ ctx, hidden }: { ctx: LessonContext; hidden: boolean }) {
         <span className="muted">
           {done}/{lessons.length} complete
         </span>
-        <RatingSummary rating={ctx.course.rating} emptyText="Not enough ratings yet" />
-        {access === "rate" && <StarRating course={ctx.course} />}
         {access === "guest" && <GuestNudge message="Create a free account to rate this course." />}
       </header>
       {ctx.course.chapters.map((chapter, i) => (
