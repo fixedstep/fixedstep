@@ -5,14 +5,20 @@ const SEPARATOR = /^---[ \t]*$/;
  * Parses hints.md: hints are separated by lines that are exactly `---` (trailing spaces allowed)
  * outside fenced code blocks. `<!-- … -->` comments outside fences are dropped and each hint is
  * trimmed. A blank (or comment-only) file has no hints. `empty` lists the 1-based indexes of
- * hints that are blank, e.g. from two separators in a row.
+ * hints that are blank, e.g. from two separators in a row. `unclosedComment` is the 1-based line
+ * of a `<!--` that never closes (it would otherwise swallow the rest of the file silently).
  */
-export function parseHints(md: string): { hints: string[]; empty: number[] } {
+export function parseHints(md: string): {
+  hints: string[];
+  empty: number[];
+  unclosedComment?: number;
+} {
   const parts: string[][] = [[]];
   let fence: string | null = null;
   let inComment = false;
+  let commentLine = 0;
 
-  for (const line of md.replace(/\r\n?/g, "\n").split("\n")) {
+  for (const [lineIndex, line] of md.replace(/\r\n?/g, "\n").split("\n").entries()) {
     const current = parts[parts.length - 1] as string[];
     if (fence !== null) {
       current.push(line);
@@ -41,6 +47,7 @@ export function parseHints(md: string): { hints: string[]; empty: number[] } {
           kept += rest.slice(0, start);
           rest = rest.slice(start + 4);
           inComment = true;
+          commentLine = lineIndex + 1;
         }
       }
     }
@@ -55,8 +62,9 @@ export function parseHints(md: string): { hints: string[]; empty: number[] } {
     current.push(kept);
   }
 
+  const unclosed = inComment ? { unclosedComment: commentLine } : {};
   const hints = parts.map((p) => p.join("\n").trim());
-  if (hints.length === 1 && hints[0] === "") return { hints: [], empty: [] };
+  if (hints.length === 1 && hints[0] === "") return { hints: [], empty: [], ...unclosed };
   const empty = hints.flatMap((h, i) => (h === "" ? [i + 1] : []));
-  return { hints, empty };
+  return { hints, empty, ...unclosed };
 }

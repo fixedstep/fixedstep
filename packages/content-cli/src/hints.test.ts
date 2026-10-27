@@ -85,8 +85,13 @@ describe("parseHints", () => {
       expect(parseHints("a\n<!-- x\n---\ny -->\n---\nb").hints).toEqual(["a", "b"]);
     });
 
-    it("drops an unterminated comment to the end of the file", () => {
-      expect(parseHints("a\n<!-- never closed\n---\nb").hints).toEqual(["a"]);
+    it("reports the line of an unterminated comment", () => {
+      expect(parseHints("a\n<!-- never closed\n---\nb").unclosedComment).toBe(2);
+      expect(parseHints("<!-- TODO").unclosedComment).toBe(1);
+      expect(parseHints("<!-- a -->\nx <!-- b -->\n<!-- c").unclosedComment).toBe(3);
+      // A closed comment, or a `<!--` inside a fence, is fine.
+      expect(parseHints("<!-- a\nb -->\nc")).not.toHaveProperty("unclosedComment");
+      expect(parseHints("```\n<!--\n```\nc")).not.toHaveProperty("unclosedComment");
     });
 
     it("keeps a --- that follows a comment on the same line as a separator", () => {

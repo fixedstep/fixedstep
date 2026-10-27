@@ -53,6 +53,15 @@ describe("loadContent hints", () => {
     await expect(loadContent(root)).rejects.toThrow(/hint 2 is empty/);
   });
 
+  it("rejects an unterminated comment instead of dropping the hints after it", async () => {
+    await newLesson(root, "game/basics/code-me", "code");
+    await writeFile(join(lessonDir("code-me"), LESSON_FILES.hints), "<!-- TODO\none\n---\ntwo");
+    await expect(loadContent(root)).rejects.toThrow(ContentError);
+    await expect(loadContent(root)).rejects.toThrow(
+      /hints\.md: comment opened on line 1 is never closed/,
+    );
+  });
+
   it("rejects hints.md on a reading lesson", async () => {
     await newLesson(root, "game/basics/read-me", "reading");
     await writeFile(join(lessonDir("read-me"), LESSON_FILES.hints), "a hint");

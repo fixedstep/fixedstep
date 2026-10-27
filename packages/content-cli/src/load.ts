@@ -80,7 +80,10 @@ async function loadLesson(dir: string, dirName: string): Promise<LoadedLesson> {
   if (hintsRaw !== null && !needsCode) {
     throw new ContentError(`${where}: hints are only for code/sim lessons`);
   }
-  const { hints, empty } = parseHints(hintsRaw ?? "");
+  const { hints, empty, unclosedComment } = parseHints(hintsRaw ?? "");
+  if (unclosedComment !== undefined) {
+    throw new ContentError(`${where}: comment opened on line ${unclosedComment} is never closed`);
+  }
   if (empty.length > 0) throw new ContentError(`${where}: hint ${empty[0]} is empty`);
   if (hints.length > MAX_HINTS) {
     throw new ContentError(`${where}: at most ${MAX_HINTS} hints (found ${hints.length})`);

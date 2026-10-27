@@ -1,6 +1,7 @@
 import type {
   CourseOutline,
   CourseRating,
+  HintStatus,
   LessonHints,
   LockedLesson,
   PublicLesson,
@@ -43,13 +44,27 @@ export type Me = {
   pro: boolean;
 };
 
+/**
+ * An API older than this bundle (web deployed first) sends no `hintStatus`; read it as possibly
+ * missing and treat that as "no hints", so the hints panel renders nothing.
+ */
+type WithOptionalHints<T extends { hintStatus: HintStatus }> = Omit<T, "hintStatus"> & {
+  hintStatus?: HintStatus;
+};
+export const NO_HINTS: HintStatus = { total: 0, unlocked: 0 };
+export function withHintStatus<T extends { hintStatus: HintStatus }>(
+  body: WithOptionalHints<T>,
+): T {
+  return { ...body, hintStatus: body.hintStatus ?? NO_HINTS } as T;
+}
+
 export const api = {
   me: () => request<Me>("/me"),
   courses: () => request<CourseOutline[]>("/courses"),
   /** Resolves to a LockedLesson (instead of throwing) when the 402 paywall applies. */
   lesson: async (id: string): Promise<PublicLesson | LockedLesson> => {
     try {
-      return await request<PublicLesson>(`/lessons/${id}`);
+      return withHintStatus(await request<WithOptionalHints<PublicLesson>>(`/lessons/${id}`));
     } catch (e) {
       if (e instanceof ApiError && e.status === 402) return e.body as LockedLesson;
       throw e;
@@ -57,11 +72,13 @@ export const api = {
   },
   /** Only the hints the caller has unlocked. */
   hints: (id: string) => request<LessonHints>(`/lessons/${id}/hints`),
-  submit: (id: string, body: SubmitRequest | Record<string, never>) =>
-    request<SubmitResponse>(`/lessons/${id}/submit`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+  submit: async (id: string, body: SubmitRequest | Record<string, never>) =>
+    withHintStatus(
+      await request<WithOptionalHints<SubmitResponse>>(`/lessons/${id}/submit`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    ),
   checkout: (interval: "month" | "year" = "month") =>
     request<{ url: string }>("/billing/checkout", {
       method: "POST",
