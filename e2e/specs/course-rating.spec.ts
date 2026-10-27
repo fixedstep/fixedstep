@@ -82,8 +82,12 @@ async function expectSteadyWhileSaving(page: Page, path?: string, { flushRight =
   await expect(status).toHaveText("Saved: you rated 4 out of 5");
   expect(await at()).toEqual(before);
   if (flushRight) {
-    const firstStarBox = await firstStar.boundingBox();
-    expect(right(await status.boundingBox())).toBeLessThanOrEqual(firstStarBox?.x ?? 0);
+    // [status] summary stars: the summary beside the stars, the save text left of the summary.
+    const summaryBox = await bar.locator(".rating-summary").boundingBox();
+    const gap = ((await firstStar.boundingBox())?.x ?? 0) - right(summaryBox);
+    expect(gap).toBeGreaterThanOrEqual(0);
+    expect(gap).toBeLessThanOrEqual(12);
+    expect(right(await status.boundingBox())).toBeLessThanOrEqual(summaryBox?.x ?? 0);
   }
 
   // "Saved" clears after 3 s.
@@ -218,6 +222,15 @@ test("the bar shows the summary but no stars to a guest or a learner with no com
   await page.goto(`/lessons/${id}`);
   await expect(bar.locator(".rating-summary")).toBeVisible();
   await expect(bar.getByRole("radio")).toHaveCount(0);
+
+  // No stars, so no reserved save-status slot: the summary ends at the bar's right edge.
+  const right = (b: { x: number; width: number } | null) => (b?.x ?? 0) + (b?.width ?? 0);
+  const barRight = right(await page.locator(".lesson-bar").boundingBox());
+  const summaryRight = right(await bar.locator(".rating-summary").boundingBox());
+  expect(Math.abs(barRight - summaryRight)).toBeLessThanOrEqual(2);
+  const groupBox = await bar.boundingBox();
+  const summaryBox = await bar.locator(".rating-summary").boundingBox();
+  expect((summaryBox?.x ?? 0) - (groupBox?.x ?? 0)).toBeLessThanOrEqual(2);
 });
 
 test("on the course's last lesson the completion card's stars sit alongside the bar's", async ({

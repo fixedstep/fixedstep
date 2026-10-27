@@ -1305,12 +1305,13 @@ kbd {
 .rating-status.error {
   color: var(--bad);
 }
-/* In the lesson bar, right-aligned: summary … [status][stars], so the stars sit at the bar's
-   right edge and the save text appears to their left (DOM order, and so the live region and
-   focus order, are unchanged). Wraps onto its own row when the bar is too narrow. The status
-   keeps a fixed width, wide enough for the longest message on one line, so text appearing
-   doesn't move anything. It's a `width`, not a flex-basis: some engines size the right-aligned
-   group from content, which would grow (and shift left) as the text appears. */
+/* In the lesson bar, right-aligned: [status] summary stars, so the summary sits beside the stars
+   and the save text appears to the left of the summary. The status lives inside the stars'
+   fieldset, so it's positioned into a slot the group reserves with padding (the fieldset stays
+   static, so the group is the containing block). Padding counts toward the group's intrinsic
+   width in every engine, so text appearing doesn't move anything, and the slot is wide enough
+   for the longest message on one line. Only a learner who can rate gets the slot
+   (`.can-rate`). Wraps onto its own row when the bar is too narrow. */
 .lesson-rating {
   display: flex;
   flex-wrap: wrap;
@@ -1319,33 +1320,43 @@ kbd {
   margin-left: auto;
   min-width: 0;
 }
+.lesson-rating.can-rate {
+  position: relative;
+  padding-left: calc(16rem + 8px);
+}
 .lesson-rating .rating-summary,
 .lesson-rating .star-rating {
   margin: 0;
 }
 .lesson-rating .rating-status {
-  order: -1;
-  flex: none;
+  position: absolute;
+  top: 50%;
+  left: 0;
   width: 16rem;
-  margin: 0 8px 0 0;
+  margin: 0;
+  transform: translateY(-50%);
   text-align: right;
 }
 /* Phones: the rating gets its own row, and the stars a full-width row below the summary, with
-   the status back after them on its own line. Its width is then definite, so its text can't
-   resize the stars' box. */
+   the status back in the flow on its own line under them. Its width is then definite, so its
+   text can't resize the stars' box. */
 @media (max-width: 600px) {
   .lesson-rating {
     flex-basis: 100%;
     margin-left: 0;
   }
+  .lesson-rating.can-rate {
+    position: static;
+    padding-left: 0;
+  }
   .lesson-rating .star-rating {
     flex-basis: 100%;
   }
   .lesson-rating .rating-status {
-    order: 0;
+    position: static;
     flex: 1 0 100%;
     width: auto;
-    margin: 0;
+    transform: none;
     text-align: left;
   }
 }

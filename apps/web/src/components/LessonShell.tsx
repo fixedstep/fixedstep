@@ -66,15 +66,21 @@ export function LessonShell({ lessonId, children }: { lessonId: string; children
 /**
  * The course rating in the always-visible bar: the summary for everyone, the stars for a learner
  * who may rate. Keyed by slug so moving to another course's lesson doesn't carry the widget's
- * unsent state (or its debounced PUT) over to the new course.
+ * unsent state (or its debounced PUT) over to the new course. `can-rate` reserves the
+ * save-status slot beside the summary (styles.css).
  */
 function BarRating({ course }: { course: CourseOutline }) {
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const canRate = rateAccess(me.data, course) === "rate";
   return (
     // biome-ignore lint/a11y/useSemanticElements: not a form group; a fieldset would wrap the stars' own fieldset and resist shrinking
-    <div className="lesson-rating" role="group" aria-label="Course rating">
+    <div
+      className={canRate ? "lesson-rating can-rate" : "lesson-rating"}
+      role="group"
+      aria-label="Course rating"
+    >
       <RatingSummary rating={course.rating} emptyText="Not enough ratings yet" />
-      {rateAccess(me.data, course) === "rate" && <StarRating key={course.slug} course={course} />}
+      {canRate && <StarRating key={course.slug} course={course} />}
     </div>
   );
 }
