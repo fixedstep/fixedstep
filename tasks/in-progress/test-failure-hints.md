@@ -28,13 +28,15 @@ each test (forgot to multiply by `dt`, off-by-one at the grid edge) but have now
 
 ## Acceptance criteria
 
-- [ ] A test declared with `{ hint }` reports the hint when it fails and omits it when it passes,
+- [x] A test declared with `{ hint }` reports the hint when it fails and omits it when it passes,
       locally and on the server, visible and hidden.
-- [ ] Hidden tests still never return `error`.
-- [ ] Tests without a hint behave as before.
-- [ ] Harness tests cover the new parameter; `runtime.test.ts` still passes.
+- [x] Hidden tests still never return `error`.
+- [x] Tests without a hint behave as before.
+- [x] Harness tests cover the new parameter; `runtime.test.ts` still passes.
 - [ ] `ResultsPanel` shows the hint for failed tests; checked manually in `pnpm dev`.
-- [ ] Lint, typecheck and tests pass.
+      _Open: the manual check is the user's. `e2e/specs/test-hints.spec.ts` covers the
+      rendering (local and server runs, no hint once passing, phone-width wrap)._
+- [x] Lint, typecheck and tests pass.
 
 ## Plan
 
