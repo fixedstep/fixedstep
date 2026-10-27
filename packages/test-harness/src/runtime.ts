@@ -133,7 +133,12 @@ export function harnessRuntime(
   const registered: Registered[] = [];
   let currentHidden = false;
   const test = (name: string, fn: () => void, opts?: { hint?: unknown }) => {
-    const h = typeof opts === "object" && opts !== null ? opts.hint : undefined;
+    let h: unknown;
+    try {
+      h = typeof opts === "object" && opts !== null ? opts.hint : undefined;
+    } catch {
+      h = undefined;
+    }
     registered[registered.length] = {
       name: _String(name),
       fn,
