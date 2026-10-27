@@ -73,6 +73,18 @@ in their prompts.
    gh pr create --base main --head <slug> --title "<title>" --body-file <scratchpad path>
    ```
 8. **Merge.** Merging is the user's call. Before suggesting
-   `! gh pr merge <slug> --squash --delete-branch`, confirm the PR head SHA still matches the
-   approved `HEAD:` line, and that CI is green. If the final review lists `Human sign-off
-   required`, put those paths in the PR body and get the user's explicit OK on them first.
+   `! gh pr merge <number> --repo fixedstep/fixedstep --squash --delete-branch`, confirm the PR
+   head SHA still matches the approved `HEAD:` line, and that CI is green. Name the repo
+   explicitly: `!` runs in the session's working directory, which may be another repo (e.g. the
+   content repo). If the final review lists `Human sign-off required`, put those paths in the
+   PR body and get the user's explicit OK on them first.
+9. **Tidy.** Once the user has merged, confirm it with
+   `gh pr view <number> --repo fixedstep/fixedstep --json state,mergeCommit` (`MERGED`), then
+   run, each as its own bare Bash call from the platform repo:
+   ```
+   git switch main
+   git pull
+   ```
+   Deleting the local branch isn't in the excluded commands, so hand the user
+   `! git -C /home/timish/source/fixedstep branch -D <slug>` (`-D`: a squash merge leaves the
+   branch looking unmerged). Report the merge commit and any follow-ups the PR listed.
