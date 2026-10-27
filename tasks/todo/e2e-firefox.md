@@ -28,15 +28,19 @@ hand, if at all.
   runs both.
 - Verify the suite catches the original bug: temporarily restore the lesson-bar rating CSS from
   commit `2b58da1` (status in flow inside the stars' fieldset, width reserved only by
-  `flex: 0 0 16rem`). The course-rating steady-layout test at 1280px should fail in Firefox and
-  pass in Chromium. Then put the current CSS back.
+  `flex: 0 0 16rem`) and run the course-rating steady-layout check at 1280px **without**
+  `flushRight`. Its layout checks (summary beside the stars, status left of the summary) assume
+  the current layout and fail on the old CSS in every browser; only the "nothing moves while
+  saving" position checks show the bug. Those should fail in Firefox and pass in Chromium. Then
+  put the current CSS back.
 - WebKit is out of scope unless it's cheap once Firefox works; note it as a follow-up.
 
 ## Acceptance criteria
 
 - [ ] `playwright.config.ts` runs every spec in Chromium and Firefox; all pass in both.
 - [ ] CI installs and caches both browsers and runs both projects; the extra CI time is noted.
-- [ ] With the lesson-bar rating CSS from `2b58da1` restored, the 1280px steady-layout test fails
-      in Firefox (shows the suite would have caught the bug); it passes again with current CSS.
+- [ ] With the lesson-bar rating CSS from `2b58da1` restored, the 1280px steady-position checks
+      (without `flushRight`) fail in Firefox and pass in Chromium, showing the suite would have
+      caught the bug; with current CSS the full test passes in both.
 - [ ] README and CLAUDE.md say how to install Firefox locally and run a single project.
 - [ ] Lint, typecheck and tests pass.
