@@ -44,9 +44,10 @@ UI on a fresh database.
 - [x] The lesson shell (bar plus outline) renders at most one interactive widget. The completion
       card's widget on a course's last lesson may appear as well, since radio names are unique
       per widget.
-- [ ] Manual check in `pnpm dev`: keyboard use and the save feedback still work in the new spot.
-      _Open: the user's check. E2E covers keyboard rating in the bar, stable layout while saving
-      at 360px, and the error message at 1280px._
+- [x] Manual check in `pnpm dev`: keyboard use and the save feedback still work in the new spot.
+      _Checked by the user in Firefox (2026-10-27) at full width, ~800px, just above 600px and
+      phone width. E2E (Chromium) covers keyboard rating in the bar and a stable layout while
+      saving at 1280/800/360px, plus the error message at 1280px._
 - [x] Lint, typecheck and tests pass.
 
 ## Plan
@@ -57,6 +58,15 @@ UI on a fresh database.
 > described below were not built. Also changed after review: at ≤600px the stars get their own
 > row (`flex-basis: 100%`) so save feedback can't move them, and the wide-screen status is
 > `16rem` so the error message fits one line.
+>
+> **Changed after the user's manual check:** in Firefox the right-aligned group shifted left
+> when "Saving…" appeared (the status reserved its width only via `flex-basis`, which Firefox
+> ignores when sizing a flex container; Chromium doesn't, so e2e passed). At the user's request
+> the wide-screen layout is now `[status] summary ★★★★★`, flush right: the summary sits beside
+> the stars and the save text appears, right-aligned, in a slot to the left of the summary. The
+> slot is `padding-left` on `.lesson-rating.can-rate` (only when the learner can rate) with the
+> status absolutely positioned in it, so its text never affects the group's width in any engine.
+> Phone layout unchanged. Follow-up: `tasks/todo/e2e-firefox.md`.
 
 **Flags:** web-only. No API, DTO (`@fixedstep/content-schema`), DB, app-spec or infra changes, so
 nothing changes in `infra/src/gcp` or `infra/src/aws` and there's no cost impact. Nothing is
