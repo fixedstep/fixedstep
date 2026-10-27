@@ -15,6 +15,65 @@ async function tabTo(page: Page, target: Locator) {
   await expect(target).toBeFocused();
 }
 
+const RATING_PUT = /\/api\/courses\/[^/]+\/rating$/;
+const STEADY_RATING = { average: null, count: 0, mine: null };
+
+/**
+ * Rates by keyboard and checks that the summary and the stars stay put while "Saving…" and
+ * "Saved…" show and after the text clears. The PUT is held, then answered here rather than by
+ * the server, and /courses always reports the same rating: this leaves the shared course rating
+ * alone for the keyboard test, and keeps that test's ratings from changing the summary's width
+ * mid-check. Pass `path` to load the page after the routes are set up.
+ */
+async function expectSteadyWhileSaving(page: Page, path?: string) {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(RATING_PUT, async (route) => {
+    await held;
+    await route.fulfill({ json: { ...STEADY_RATING, mine: 4 } });
+  });
+  await page.route(/\/api\/courses$/, async (route) => {
+    const res = await route.fetch();
+    const courses: { slug: string; rating: unknown }[] = await res.json();
+    const json = courses.map((c) => (c.slug === COURSE ? { ...c, rating: STEADY_RATING } : c));
+    await route.fulfill({ response: res, json });
+  });
+  if (path) await page.goto(path);
+  else await page.reload();
+
+  const bar = page.getByRole("group", { name: "Course rating" });
+  const status = bar.getByRole("status");
+  await expect(bar.locator(".rating-summary")).toHaveText("Not enough ratings yet");
+  const at = async () => {
+    expect(
+      await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
+    ).toBeLessThanOrEqual(0);
+    const boxes = [];
+    for (const el of [bar.locator(".rating-summary"), bar.locator(".star-rating")]) {
+      const b = await el.boundingBox();
+      boxes.push({ x: b?.x, y: b?.y });
+    }
+    return boxes;
+  };
+  const before = await at();
+
+  await bar.getByRole("radio", { name: "Rate 1 out of 5" }).focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(status).toHaveText("Saving…");
+  expect(await at()).toEqual(before);
+
+  release();
+  await expect(status).toHaveText("Saved: you rated 4 out of 5");
+  expect(await at()).toEqual(before);
+
+  // "Saved" clears after 3 s.
+  await expect(status).toHaveText("", { timeout: 6000 });
+  expect(await at()).toEqual(before);
+}
+
 test("a student rates the course from the lesson bar with the keyboard only", async ({
   page,
   playwright,
@@ -95,48 +154,25 @@ test("the rating line fits at phone width", async ({ page }) => {
     await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
   ).toBeLessThanOrEqual(0);
 
-  // The save feedback mustn't move the stars. The PUT is held, then answered here rather than
-  // by the server, so this test leaves the shared course rating alone for the test above.
-  let release = () => {};
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route(/\/api\/courses\/[^/]+\/rating$/, async (route) => {
-    await held;
-    await route.fulfill({ json: { average: null, count: 1, mine: 4 } });
-  });
-  const stars = bar.locator(".star-rating");
-  const status = bar.getByRole("status");
-  const at = async () => {
-    const b = await stars.boundingBox();
-    expect(
-      await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
-    ).toBeLessThanOrEqual(0);
-    return { x: b?.x, y: b?.y };
-  };
-  const before = await at();
-
-  await bar.getByRole("radio", { name: "Rate 1 out of 5" }).focus();
-  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("Enter");
-  await expect(status).toHaveText("Saving…");
-  expect(await at()).toEqual(before);
-
-  release();
-  await expect(status).toHaveText("Saved: you rated 4 out of 5");
-  expect(await at()).toEqual(before);
-
-  // "Saved" clears after 3 s.
-  await expect(status).toHaveText("", { timeout: 6000 });
-  expect(await at()).toEqual(before);
+  await expectSteadyWhileSaving(page);
 });
+
+for (const width of [1280, 800]) {
+  test(`saving a rating doesn't move the rating line at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await signUp(page.request);
+    const id = await lessonId(page.request, LESSONS.reading);
+    await completeLesson(page.request, id);
+    await expectSteadyWhileSaving(page, `/lessons/${id}`);
+  });
+}
 
 test("a failed save's message fits the status line on a wide screen", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await signUp(page.request);
   const id = await lessonId(page.request, LESSONS.reading);
   await completeLesson(page.request, id);
-  await page.route(/\/api\/courses\/[^/]+\/rating$/, (route) => route.fulfill({ status: 500 }));
+  await page.route(RATING_PUT, (route) => route.fulfill({ status: 500 }));
   await page.goto(`/lessons/${id}`);
 
   const bar = page.getByRole("group", { name: "Course rating" });
