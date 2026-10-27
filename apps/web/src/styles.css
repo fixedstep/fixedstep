@@ -1276,6 +1276,10 @@ kbd {
   line-height: 1;
   color: var(--border);
 }
+/* Hidden text stays inside its star, not 1px past the last one at the bar's right edge. */
+.star-rating label .sr-only {
+  left: 0;
+}
 .star-rating label.filled {
   color: var(--accent);
 }
@@ -1301,10 +1305,12 @@ kbd {
 .rating-status.error {
   color: var(--bad);
 }
-/* In the lesson bar: wraps onto its own row when the bar is too narrow. The status keeps a
-   fixed width, wide enough for the longest message on one line, so text appearing doesn't
-   move anything. It's a `width`, not a flex-basis: some engines size the right-aligned group
-   from content, which would grow (and shift left) as the text appears. */
+/* In the lesson bar, right-aligned: summary … [status][stars], so the stars sit at the bar's
+   right edge and the save text appears to their left (DOM order, and so the live region and
+   focus order, are unchanged). Wraps onto its own row when the bar is too narrow. The status
+   keeps a fixed width, wide enough for the longest message on one line, so text appearing
+   doesn't move anything. It's a `width`, not a flex-basis: some engines size the right-aligned
+   group from content, which would grow (and shift left) as the text appears. */
 .lesson-rating {
   display: flex;
   flex-wrap: wrap;
@@ -1318,11 +1324,15 @@ kbd {
   margin: 0;
 }
 .lesson-rating .rating-status {
+  order: -1;
   flex: none;
   width: 16rem;
+  margin: 0 8px 0 0;
+  text-align: right;
 }
-/* Phones: the rating gets its own row, and the stars a full-width row below the summary, so the
-   status line under them has a definite width and its text can't resize the stars' box. */
+/* Phones: the rating gets its own row, and the stars a full-width row below the summary, with
+   the status back after them on its own line. Its width is then definite, so its text can't
+   resize the stars' box. */
 @media (max-width: 600px) {
   .lesson-rating {
     flex-basis: 100%;
@@ -1332,9 +1342,11 @@ kbd {
     flex-basis: 100%;
   }
   .lesson-rating .rating-status {
+    order: 0;
     flex: 1 0 100%;
     width: auto;
-    margin-left: 0;
+    margin: 0;
+    text-align: left;
   }
 }
 .completion-rate {

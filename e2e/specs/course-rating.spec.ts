@@ -23,9 +23,10 @@ const STEADY_RATING = { average: null, count: 0, mine: null };
  * "Saved…" show and after the text clears. The PUT is held, then answered here rather than by
  * the server, and /courses always reports the same rating: this leaves the shared course rating
  * alone for the keyboard test, and keeps that test's ratings from changing the summary's width
- * mid-check. Pass `path` to load the page after the routes are set up.
+ * mid-check. Pass `path` to load the page after the routes are set up. `flushRight` also checks
+ * the wide layout: stars at the bar's right edge, the save text to their left.
  */
-async function expectSteadyWhileSaving(page: Page, path?: string) {
+async function expectSteadyWhileSaving(page: Page, path?: string, { flushRight = false } = {}) {
   let release = () => {};
   const held = new Promise<void>((resolve) => {
     release = resolve;
@@ -51,13 +52,25 @@ async function expectSteadyWhileSaving(page: Page, path?: string) {
       await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
     ).toBeLessThanOrEqual(0);
     const boxes = [];
-    for (const el of [bar.locator(".rating-summary"), bar.locator(".star-rating")]) {
+    for (const el of [
+      bar.locator(".rating-summary"),
+      bar.locator(".star-rating"),
+      bar.locator(".star-rating label").first(),
+    ]) {
       const b = await el.boundingBox();
       boxes.push({ x: b?.x, y: b?.y });
     }
     return boxes;
   };
   const before = await at();
+
+  const firstStar = bar.locator(".star-rating label").first();
+  const lastStar = bar.locator(".star-rating label").last();
+  const right = (b: { x: number; width: number } | null) => (b?.x ?? 0) + (b?.width ?? 0);
+  if (flushRight) {
+    const barBox = await page.locator(".lesson-bar").boundingBox();
+    expect(Math.abs(right(barBox) - right(await lastStar.boundingBox()))).toBeLessThanOrEqual(2);
+  }
 
   await bar.getByRole("radio", { name: "Rate 1 out of 5" }).focus();
   for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowRight");
@@ -68,6 +81,10 @@ async function expectSteadyWhileSaving(page: Page, path?: string) {
   release();
   await expect(status).toHaveText("Saved: you rated 4 out of 5");
   expect(await at()).toEqual(before);
+  if (flushRight) {
+    const firstStarBox = await firstStar.boundingBox();
+    expect(right(await status.boundingBox())).toBeLessThanOrEqual(firstStarBox?.x ?? 0);
+  }
 
   // "Saved" clears after 3 s.
   await expect(status).toHaveText("", { timeout: 6000 });
@@ -163,7 +180,7 @@ for (const width of [1280, 800]) {
     await signUp(page.request);
     const id = await lessonId(page.request, LESSONS.reading);
     await completeLesson(page.request, id);
-    await expectSteadyWhileSaving(page, `/lessons/${id}`);
+    await expectSteadyWhileSaving(page, `/lessons/${id}`, { flushRight: true });
   });
 }
 
