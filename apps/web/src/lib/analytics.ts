@@ -1,4 +1,5 @@
 import type { ClientConfig } from "@fixedstep/content-schema";
+import type { CaptureResult, PostHogConfig } from "posthog-js";
 import type { Me } from "./api";
 
 /**
@@ -21,11 +22,9 @@ export type AnalyticsEvent =
   | { name: "checkout_started"; interval: "month" | "year" }
   | { name: "checkout_completed" };
 
-type CaptureResult = { event: string; properties: Record<string, unknown> };
-
 /** The subset of the posthog-js API used here. */
 export type PostHogLike = {
-  init(key: string, options: ReturnType<typeof posthogOptions>): unknown;
+  init(key: string, options: Partial<PostHogConfig>): unknown;
   register(props: Record<string, unknown>): void;
   capture(event: string, props?: Record<string, unknown>, options?: { transport?: string }): void;
   identify(id: string): void;
@@ -134,5 +133,5 @@ export function createAnalytics(load: () => Promise<PostHogLike>) {
 
 export const analytics = createAnalytics(() =>
   // Loaded only when a key is configured, so local/e2e/CI never fetch or run it.
-  import("posthog-js").then((m) => m.default as unknown as PostHogLike),
+  import("posthog-js").then((m): PostHogLike => m.default),
 );

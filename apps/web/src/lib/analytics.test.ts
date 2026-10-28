@@ -158,6 +158,7 @@ describe("before_send", () => {
     const { before_send } = posthogOptions("https://us.i.posthog.com");
     const out = before_send({
       event: "$pageview",
+      uuid: "u",
       properties: {
         $current_url: "https://x.test/reset-password?token=abc",
         $referrer: "https://x.test/login?redirect=/a#b",
@@ -292,6 +293,7 @@ describe("before_send edge cases", () => {
   it("sanitises session-entry and initial URL props, and an external referrer", () => {
     const out = before_send({
       event: "x",
+      uuid: "u",
       properties: {
         $initial_referrer: "https://google.test/search?q=my+email@x.test",
         $initial_current_url: "https://x.test/reset-password?token=SECRET",
@@ -306,6 +308,7 @@ describe("before_send edge cases", () => {
   it("leaves non-string URL props and other props untouched", () => {
     const out = before_send({
       event: "x",
+      uuid: "u",
       properties: { $current_url: 5, $referrer: undefined, lessonId: "a?b" },
     });
     expect(out?.properties).toEqual({ $current_url: 5, $referrer: undefined, lessonId: "a?b" });
