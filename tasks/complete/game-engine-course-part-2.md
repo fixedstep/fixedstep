@@ -71,8 +71,8 @@ below was agreed with part 1.
       with no "starter already passes" warnings.
 - [x] Each reading lesson has TS/Odin snippet tabs; every Odin tab has a wrapper in `odin/`
       and `node odin/check.mjs` passes (26 wrappers, Odin `dev-2026-10:84bc3fc21`).
-- [ ] Manually played through in `pnpm content:dev`, at desktop and phone width (whole course).
-      Open: the user plays it (the `content-preview-unpublished` task would make this easier).
+- [x] Manually played through in `pnpm content:dev`, at desktop and phone width (whole course;
+      user, 2026-10-28). Published to staging (#8) and prod (`v0.3.0.1`).
 
 ## Plan
 

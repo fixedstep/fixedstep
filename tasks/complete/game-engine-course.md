@@ -68,8 +68,8 @@ Part 1 (chapters 1–4) only; chapters 5–8 moved to task `game-engine-course-p
 - [x] Each reading lesson has TS/Odin snippet tabs for its key code; Odin snippets compile
       with the current Odin release (checked locally; not graded). 17 wrappers under the
       content repo's `odin/`, `node odin/check.mjs` all ok with `dev-2026-10:84bc3fc21`.
-- [ ] Manually played through in `pnpm content:dev`, at desktop and phone width. Open: the
-      user plays it.
+- [x] Manually played through in `pnpm content:dev`, at desktop and phone width (user,
+      2026-10-28, whole course). Published to staging (#8) and prod (`v0.3.0.1`).
 
 Content PR: `fixedstep/fixedstep-content` branch `game-engine-course` → `main` (the content
 repo's default branch is `main`, not `content` as the plan below says). Reviewer approved
