@@ -1,4 +1,9 @@
-import type { GradeResult, PublicLesson, SubmitRequest } from "@fixedstep/content-schema";
+import type {
+  CourseOutline,
+  GradeResult,
+  PublicLesson,
+  SubmitRequest,
+} from "@fixedstep/content-schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -14,8 +19,10 @@ import { Preview } from "../components/Preview";
 import { ResultsPanel } from "../components/ResultsPanel";
 import { LessonSkeleton } from "../components/Skeleton";
 import { BillingToggle, UpgradeErrors, useUpgrade } from "../components/Upgrade";
+import { analytics } from "../lib/analytics";
 import { ApiError, api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
+import { completionEvents } from "../lib/course-nav";
 import { withUpgrade } from "../lib/redirect";
 import { runTestsInWorker } from "../lib/run-in-worker";
 import { submitErrorMessage } from "../lib/submit-error";
@@ -104,6 +111,13 @@ function useSubmit(lessonId: string) {
       return { ...(await api.submit(lessonId, body)), prevStreak, becameGuest };
     },
     onSuccess: (res) => {
+      if (res.completed) {
+        // Read before the invalidation below refetches the outline.
+        const courses = qc.getQueryData<CourseOutline[]>(["courses"]);
+        for (const event of courses ? completionEvents(courses, lessonId) : []) {
+          analytics.track(event);
+        }
+      }
       if (res.completed || res.becameGuest) void qc.invalidateQueries({ queryKey: ["me"] });
       if (res.completed) {
         void qc.invalidateQueries({ queryKey: ["courses"] });

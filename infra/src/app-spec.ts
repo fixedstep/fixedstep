@@ -101,6 +101,10 @@ export function apiSpec(
   const smtp = Boolean(opts.secrets.SMTP_URL && emailFrom);
   if (!smtp) pulumi.log.warn("SMTP_URL/emailFrom not set; the API will log emails, not send them");
 
+  const posthogKey = new pulumi.Config().get("posthogKey");
+  const posthogHost = new pulumi.Config().get("posthogHost");
+  if (!posthogKey) pulumi.log.info("posthogKey not set; analytics is off");
+
   return {
     dockerfile: "apps/api/Dockerfile",
     port: 3000,
@@ -116,6 +120,11 @@ export function apiSpec(
       ...(smtp && emailReplyTo ? { EMAIL_REPLY_TO: emailReplyTo } : {}),
       // Marks staging mail, which goes to real (tester) inboxes.
       ...(config.stage === "staging" ? { EMAIL_SUBJECT_PREFIX: "[staging]" } : {}),
+      // Tags every PostHog event (one shared project); the key is public, so not a secret.
+      APP_STAGE: config.stage,
+      ...(posthogKey
+        ? { POSTHOG_KEY: posthogKey, ...(posthogHost ? { POSTHOG_HOST: posthogHost } : {}) }
+        : {}),
     },
     secrets: Object.keys(opts.secrets),
   };

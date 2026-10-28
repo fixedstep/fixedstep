@@ -216,6 +216,66 @@ Bounces and spam complaints show up in each Server's **Activity** page (Default 
 Stream). Postmark suppresses hard-bounced and complaining addresses automatically; they're listed
 under the stream's **Suppressions**.
 
+### Analytics (PostHog)
+
+Product analytics (page views, sign-up and checkout funnels, retention) go to one
+[PostHog](https://posthog.com) cloud project in the US region, shared by staging and prod. Every
+event carries a `stage` property (`staging` / `prod`) and PostHog filters tell them apart. The
+free plan covers 1 project, 1M events a month and 1 year of retention; events over the limit are
+dropped, not billed (checked 2026-10-28; see [posthog.com/pricing](https://posthog.com/pricing)
+for current limits and paid rates).
+
+It is off unless a key is set, so local development, e2e and CI send nothing. Set the project's
+public key (not a secret: it's visible in the browser) on both stage stacks:
+
+```sh
+pnpm infra config set -s <cloud>-<stage> posthogKey phc_…
+pnpm infra config set -s <cloud>-<stage> posthogHost https://us.i.posthog.com   # optional (default)
+```
+
+The API hands the key, host and stage to the SPA at runtime through `GET /api/config`, so one
+image serves every stage. Cookies and local storage are off (in-memory PostHog id), so no
+consent banner is needed; autocapture and session recording are off; URLs are sent without query
+strings or hashes; signed-in users are identified by their opaque user id only (no email or
+name). Guests are tracked anonymously. Events: `$pageview`, `sign_up`, `email_verified`,
+`course_started` (first completed lesson in a course), `lesson_completed`, `checkout_started`
+and `checkout_completed` (only once the account is confirmed Pro).
+
+Known, accepted gap: a full-page redirect (GitHub login, Polar checkout, the verify-email link)
+starts a new anonymous id, so funnels through those steps join only from the identified side.
+
+PostHog project settings to apply once:
+
+- Turn on discarding client IP data.
+- Set the internal/test account filter to `stage != prod`, so the default "filter out internal
+  and test users" on new insights shows prod only. For staging, add the filter `stage = staging`
+  and turn the test-account toggle off. Keep the test-account filter on for funnel and retention
+  insights.
+
+The privacy policy and terms don't name PostHog yet (a follow-up task).
+
+### Learning metrics (admins)
+
+Authors see per-lesson and per-course numbers (starts, completions, median attempts to pass,
+hint unlocks, drop-off between lessons, completion rate, ratings) at `GET /api/admin/metrics`
+and `GET /api/admin/metrics/<course-slug>`. Open the URL in a browser while signed in. Only
+verified, non-guest accounts with `role = 'admin'` get an answer (401 signed out, 403 otherwise).
+The responses are counts only: never lesson tests, solutions, quiz answers or hint texts.
+
+The role lives only in the database (`user.role`, default `user`); the app has no way to set it.
+Grant or revoke it with SQL, expecting `UPDATE 1`:
+
+```sql
+UPDATE "user" SET role = 'admin' WHERE email = '<email>' AND email_verified AND NOT coalesce(is_anonymous, false);
+UPDATE "user" SET role = 'user' WHERE email = '<email>';   -- revoke
+```
+
+Run it with `psql` against the compose database locally (`docker compose exec postgres psql -U
+fixedstep -c '…'`). On AWS, use the stack's ops task like the restore step in "Moving between
+clouds", with `command: ["sh", "-c", "psql \"$DATABASE_URL\" -c '…'"]`. On GCP, connect through
+the Cloud SQL Auth Proxy as in the dump step there. The check reads the role on every request, so
+changes apply at once.
+
 ### GCP setup (per stage, as a project owner)
 
 1. Create the project with billing enabled, then
@@ -291,7 +351,8 @@ the reverse uses the same plan.
 1. Do the AWS setup above through step 3.
 2. Copy the provider credentials: list them with
    `pnpm infra config -s gcp-<stage> --show-secrets` (GCP backend) and set each on `aws-<stage>`
-   (AWS backend).
+   (AWS backend). Include `posthogKey` and `posthogHost`. The `user.role` column (admins) moves
+   with the database dump.
 3. Pin the generated secrets that must not change. `BETTER_AUTH_SECRET` keeps everyone logged in,
    and `CONTENT_SYNC_TOKEN` keeps the content repo's secret valid:
 

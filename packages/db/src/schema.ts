@@ -27,6 +27,9 @@ const timestamps = {
 // upgrading better-auth or adding plugins, diff against `npx @better-auth/cli generate`.
 // ---------------------------------------------------------------------------
 
+/** Same column name and values as better-auth's `admin` plugin, should it ever be added. */
+export const userRole = pgEnum("user_role", ["user", "admin"]);
+
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -35,6 +38,8 @@ export const user = pgTable("user", {
   image: text("image"),
   /** Better Auth anonymous plugin: a guest who hasn't created an account yet. */
   isAnonymous: boolean("is_anonymous").default(false),
+  /** Server-only; not a better-auth field, so clients can't set it. Grant via SQL (README). */
+  role: userRole("role").notNull().default("user"),
   ...timestamps,
 });
 

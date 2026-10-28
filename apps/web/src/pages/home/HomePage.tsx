@@ -1,27 +1,51 @@
 import type { CourseOutline } from "@fixedstep/content-schema";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ManageBillingButton } from "../../components/ManageBillingButton";
 import { Playground } from "../../components/Playground";
 import { CourseListSkeleton } from "../../components/Skeleton";
 import { BillingToggle, UpgradeErrors, useUpgrade } from "../../components/Upgrade";
+import { analytics } from "../../lib/analytics";
 import { api, type Me } from "../../lib/api";
 import { allLessons, CourseCatalog, courseProgress } from "./CourseCatalog";
 import { FAQ, GITHUB_URL, PRICING, ROADMAP, STEPS } from "./content";
 import heroDemo from "./hero-demo.ts?raw";
+
+const CHECKOUT_POLL_MS = 60_000;
 
 /**
  * Signed out: a landing page (hero demo, how it works, courses, pricing, roadmap, FAQ).
  * Signed in: a "continue" panel, then courses; pricing only for non-Pro users.
  */
 export function HomePage() {
-  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  // Back from Polar (?checkout=success): poll /me until the webhook has made the user Pro.
+  const [checkoutDone] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("checkout") === "success",
+  );
+  const pollUntil = useRef(Date.now() + CHECKOUT_POLL_MS);
+  const me = useQuery({
+    queryKey: ["me"],
+    queryFn: api.me,
+    refetchInterval: (q) =>
+      checkoutDone && !q.state.data?.pro && Date.now() < pollUntil.current ? 3000 : false,
+  });
   const courses = useQuery({ queryKey: ["courses"], queryFn: api.courses });
   const signedIn = Boolean(me.data?.user);
-  const checkoutDone =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("checkout") === "success";
+
+  // checkout_completed only from the confirmed state (me.pro), never optimistically.
+  const reported = useRef(false);
+  const pro = me.data?.pro;
+  useEffect(() => {
+    if (!checkoutDone || !pro || reported.current) return;
+    reported.current = true;
+    analytics.track({ name: "checkout_completed" });
+    const url = new URL(window.location.href);
+    url.searchParams.delete("checkout");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [checkoutDone, pro]);
 
   return (
     <div className="home">

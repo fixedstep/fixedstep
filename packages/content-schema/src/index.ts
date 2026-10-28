@@ -208,3 +208,46 @@ export const SubmitResponse = z.object({
   hintStatus: HintStatus,
 });
 export type SubmitResponse = z.infer<typeof SubmitResponse>;
+
+/** GET /api/config: runtime web config. `analytics` is null when PostHog isn't configured. */
+export const ClientConfig = z.object({
+  analytics: z.object({ key: z.string(), host: z.url(), stage: z.string() }).nullable(),
+});
+export type ClientConfig = z.infer<typeof ClientConfig>;
+
+/**
+ * Admin-only learning metrics, built field-by-field from counts and aggregates. Never hint
+ * texts, `hiddenTests`, `solution` or quiz questions/answers.
+ */
+export const LessonMetrics = z.object({
+  lessonId: z.string(),
+  slug: Slug,
+  title: z.string(),
+  kind: LessonKind,
+  chapterSlug: Slug,
+  /** Distinct users with at least one submission. */
+  starts: z.number().int(),
+  /** Users with a lesson_progress row. */
+  completions: z.number().int(),
+  /** Median over users who passed of their attempts up to and including the first pass. */
+  medianAttemptsToPass: z.number().nullable(),
+  hintsAvailable: z.number().int(),
+  learnersWithHints: z.number().int(),
+  hintUnlocks: z.number().int(),
+  /** Share of users who completed the previous lesson but never started this one. */
+  dropOffFromPrev: z.number().nullable(),
+});
+export type LessonMetrics = z.infer<typeof LessonMetrics>;
+
+export const CourseMetrics = z.object({
+  slug: Slug,
+  title: z.string(),
+  published: z.boolean(),
+  learners: z.number().int(),
+  completers: z.number().int(),
+  completionRate: z.number().nullable(),
+  /** Raw count and average (2 decimals); no minimum-ratings threshold for admins. */
+  rating: z.object({ average: z.number().nullable(), count: z.number().int() }),
+  lessons: z.array(LessonMetrics),
+});
+export type CourseMetrics = z.infer<typeof CourseMetrics>;
