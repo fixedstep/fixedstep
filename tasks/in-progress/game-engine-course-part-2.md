@@ -65,13 +65,14 @@ below was agreed with part 1.
 
 ## Acceptance criteria
 
-- [ ] Chapters `input`, `physics`, `scenes` and `capstone` in `courses/game-engine/`, listed in
+- [x] Chapters `input`, `physics`, `scenes` and `capstone` in `courses/game-engine/`, listed in
       the course and matching the outline above; the course stays `published: false`.
-- [ ] Every `code`/`sim` lesson has a `solution.ts` that passes its tests; validate passes
+- [x] Every `code`/`sim` lesson has a `solution.ts` that passes its tests; validate passes
       with no "starter already passes" warnings.
-- [ ] Each reading lesson has TS/Odin snippet tabs; every Odin tab has a wrapper in `odin/`
-      and `node odin/check.mjs` passes.
+- [x] Each reading lesson has TS/Odin snippet tabs; every Odin tab has a wrapper in `odin/`
+      and `node odin/check.mjs` passes (26 wrappers, Odin `dev-2026-10:84bc3fc21`).
 - [ ] Manually played through in `pnpm content:dev`, at desktop and phone width (whole course).
+      Open: the user plays it (the `content-preview-unpublished` task would make this easier).
 
 ## Plan
 

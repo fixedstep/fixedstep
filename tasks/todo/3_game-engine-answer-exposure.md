@@ -16,6 +16,10 @@ lesson body and hints and replaced it with prose. The same answer is still visib
 - Odin tabs in code lessons show the graded algorithm in full:
   - `memory/particle-pool/lesson.md`: the whole swap-remove `update` loop.
   - `rendering/draw-queue/lesson.md`: the whole run-batching loop.
+- `capstone/putting-it-together/lesson.md` (part 2, the reading lesson just before the
+  capstone): the full native `main.odin` includes `coin_system`, `hit_system` and the play-case
+  system order, which is the capstone's graded logic. Part 2's plan allowed this one full Odin
+  tab on purpose; the other part 2 Odin tabs show only code that isn't graded.
 - Accepted at the time as spec rather than leaks: the clock loop in `fixed-step-clock`, the
   generation check in `generational-handles`, and `k = min(1, FOLLOW * dt)` in
   `camera-follow`.
