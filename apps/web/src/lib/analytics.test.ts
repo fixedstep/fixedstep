@@ -292,7 +292,7 @@ describe("before_send edge cases", () => {
 
   it("sanitises session-entry and initial URL props, and an external referrer", () => {
     const out = before_send({
-      event: "x",
+      event: "$pageview",
       uuid: "u",
       properties: {
         $initial_referrer: "https://google.test/search?q=my+email@x.test",
@@ -307,7 +307,7 @@ describe("before_send edge cases", () => {
 
   it("leaves non-string URL props and other props untouched", () => {
     const out = before_send({
-      event: "x",
+      event: "$pageview",
       uuid: "u",
       properties: { $current_url: 5, $referrer: undefined, lessonId: "a?b" },
     });
@@ -337,5 +337,84 @@ describe("before_send edge cases", () => {
     expect(json).not.toContain("#");
     expect(out?.$set_once?.$initial_current_url).toBe("https://x.test/reset-password");
     expect(out?.$set?.name).toBe("n");
+  });
+});
+
+describe("remote-switchable capture is pinned off", () => {
+  const opts = posthogOptions("https://us.i.posthog.com");
+
+  it("pins every feature that project settings can turn on", () => {
+    expect(opts).toMatchObject({
+      autocapture: false,
+      rageclick: false,
+      capture_pageview: false,
+      capture_pageleave: false,
+      capture_performance: false,
+      capture_heatmaps: false,
+      capture_dead_clicks: false,
+      capture_exceptions: false,
+      capture_webmcp: false,
+      store_google: false,
+      disable_session_recording: true,
+      disable_surveys: true,
+      disable_product_tours: true,
+      disable_conversations: true,
+      disable_web_experiments: true,
+      disable_scroll_properties: true,
+    });
+  });
+
+  it.each([
+    "$web_vitals",
+    "$heatmap",
+    "$$heatmap",
+    "$dead_click",
+    "$exception",
+    "$autocapture",
+    "$rageclick",
+    "$pageleave",
+    "$set",
+    "something_else",
+  ])("drops %s", (event) => {
+    expect(opts.before_send({ event, uuid: "u", properties: {} })).toBeNull();
+  });
+
+  it.each([
+    "$pageview",
+    "$identify",
+    "sign_up",
+    "email_verified",
+    "course_started",
+    "lesson_completed",
+    "checkout_started",
+    "checkout_completed",
+  ])("allows %s", (event) => {
+    expect(opts.before_send({ event, uuid: "u", properties: {} })).not.toBeNull();
+  });
+
+  it("strips URLs from nested props, arrays and keys of an allowed event", () => {
+    const out = opts.before_send({
+      event: "$pageview",
+      uuid: "u",
+      properties: {
+        nested: { deeper: [{ href: "https://x.test/reset-password?token=SECRET" }] },
+        list: ["/reset-password?token=SECRET", "plain?text"],
+        "/reset-password?token=SECRET": 1,
+        "https://x.test/a#SECRET": { v: "/b#SECRET" },
+        $web_vitals_LCP_event: {
+          $current_url: "https://x.test/p?token=SECRET",
+          navigationURL: "/q?SECRET",
+        },
+        ph_keyword: "SECRET",
+        $initial_ph_keyword: "SECRET",
+        $search_engine: "google",
+      },
+    });
+    const json = JSON.stringify(out);
+    expect(json).not.toContain("SECRET");
+    expect(json).toContain("/reset-password");
+    expect(json).toContain("plain?text");
+    expect(out?.properties).not.toHaveProperty("ph_keyword");
+    expect(out?.properties).not.toHaveProperty("$search_engine");
   });
 });

@@ -241,6 +241,10 @@ name). Guests are tracked anonymously. Events: `$pageview`, `sign_up`, `email_ve
 `course_started` (first completed lesson in a course), `lesson_completed`, `checkout_started`
 and `checkout_completed` (only once the account is confirmed Pro).
 
+Don't rely on PostHog project toggles (web vitals, heatmaps, dead clicks, exception capture,
+surveys, session replay): the client pins those features off and drops every event except the
+ones above, so switching them on in the project does nothing.
+
 Known, accepted gap: a Pro user revisiting `/?checkout=success` (bookmark, back button) fires
 `checkout_completed` again; the param is stripped after the first fire, so a reload doesn't.
 
