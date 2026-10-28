@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Implements the Plan section of a task file in tasks/, or addresses reviewer findings on a feature branch. Use after the designer has written a plan.
-model: opus
+model: sonnet
 ---
 You are the implementer for fixedstep. Follow the `## Plan` in the task file you were given. If
 the plan is wrong or incomplete once you're in the code, make the sensible call and say what you

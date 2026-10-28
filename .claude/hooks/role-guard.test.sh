@@ -47,6 +47,17 @@ deny tester "$(edit MultiEdit /repo/tasks/in-progress/x.md)"
 deny tester "$(edit Edit /repo/apps/api/src/x.spec.ts)"
 allow tester "$(edit Edit apps/api/src/x.test.ts)"
 allow tester "$(edit Edit /repo/apps/api/src/../src/x.test.ts)"
+allow tester "$(edit Edit /content/courses/game/ch/lesson/tests.ts)"
+allow tester "$(edit Write /content/courses/game/ch/lesson/tests.hidden.ts)"
+allow tester "$(edit Edit /repo/content-sample/courses/c/ch/l/tests.ts)"
+deny tester "$(edit Edit /content/courses/game/ch/lesson/solution.ts)"
+deny tester "$(edit Edit /content/courses/game/ch/lesson/starter.ts)"
+deny tester "$(edit Edit /content/courses/game/ch/lesson/lesson.md)"
+deny tester "$(edit Edit /content/courses/game/ch/tests.ts)"
+deny tester "$(edit Edit /content/courses/game/ch/lesson/extra/tests.ts)"
+deny tester "$(edit Edit /content/courses/game/ch/lesson/tests.ts.bak)"
+deny tester "$(edit Edit /content/odin/tests.ts)"
+deny tester "$(edit Edit /content/courses/game/ch/../../../x/tests.ts)"
 # A *.test.ts symlink to a production file resolves to the production file.
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -107,12 +118,28 @@ for c in \
   'git diff origin/main...HEAD 2>/dev/null || git diff main...HEAD' \
   'pnpm lint' \
   'ls -la >/dev/null' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate /content 2>&1 | tail -20' \
+  '/repo/node_modules/.bin/tsx packages/content-cli/src/cli.ts validate ../content' \
+  'cd /content && node odin/check.mjs' \
+  'node odin/check.mjs --missing' \
   $'git status --porcelain\ngit rev-parse HEAD'; do
   allow reviewer "$(bash_cmd "$c")"
 done
 
 # reviewer: blocked
 for c in \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts bundle /content out.json' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts new game/ch/x code' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts init /tmp/x' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate /content extra' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate --foo' \
+  'node_modules/.bin/tsx x.ts' \
+  'node_modules/.bin/tsx -e "require(1)"' \
+  'node -e "require(1)"' \
+  'node odin/check.mjs --other' \
+  'node other.mjs' \
+  'node ../odin/check.mjs' \
   'git commit -m x' \
   'git push origin HEAD' \
   'git checkout main' \
