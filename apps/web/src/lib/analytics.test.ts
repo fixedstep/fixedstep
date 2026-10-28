@@ -179,3 +179,135 @@ describe("before_send", () => {
     expect(posthogOptions("https://h.test").before_send(null)).toBeNull();
   });
 });
+
+describe("PII", () => {
+  const jsonOfCalls = (ph: ReturnType<typeof fakePostHog>["ph"]) =>
+    JSON.stringify([
+      ph.init.mock.calls.map((c) => c[0]),
+      ph.register.mock.calls,
+      ph.capture.mock.calls,
+      ph.identify.mock.calls,
+    ]);
+
+  it("never sends the email or name in any PostHog call", async () => {
+    const { ph } = fakePostHog();
+    const a = createAnalytics(async () => ph);
+    a.setUser(user());
+    await a.init(config);
+    a.pageview();
+    a.setUser(user());
+    a.track({ name: "sign_up", method: "email", fromGuest: true });
+    a.track({ name: "lesson_completed", course: "c", lessonId: "l", kind: "code" });
+    a.track({ name: "checkout_started", interval: "month" }, { beacon: true });
+    a.setUser(null);
+    const json = jsonOfCalls(ph);
+    expect(json).not.toContain("ada@example.com");
+    expect(json).not.toContain("Ada");
+    expect(ph.identify).toHaveBeenCalledWith("u1");
+  });
+
+  it("passes only the event name and its own props to capture", async () => {
+    const { ph } = fakePostHog();
+    const a = createAnalytics(async () => ph);
+    await a.init(config);
+    a.track({ name: "sign_up", method: "github", fromGuest: false });
+    expect(ph.capture).toHaveBeenCalledWith(
+      "sign_up",
+      { method: "github", fromGuest: false },
+      undefined,
+    );
+  });
+});
+
+describe("buffered identity", () => {
+  it("flushes an identify queued before init, after the stage is registered", async () => {
+    const { ph } = fakePostHog();
+    const a = createAnalytics(async () => ph);
+    a.setUser(user());
+    expect(ph.identify).not.toHaveBeenCalled();
+    await a.init(config);
+    expect(ph.identify).toHaveBeenCalledWith("u1");
+    expect(ph.register.mock.invocationCallOrder[0]).toBeLessThan(
+      ph.identify.mock.invocationCallOrder[0] as number,
+    );
+  });
+
+  it("drops buffered identify and events when init(null) arrives", async () => {
+    const { ph } = fakePostHog();
+    const load = vi.fn(async () => ph);
+    const a = createAnalytics(load);
+    a.setUser(user());
+    a.pageview();
+    await a.init(null);
+    expect(load).not.toHaveBeenCalled();
+    expect(ph.identify).not.toHaveBeenCalled();
+    expect(ph.capture).not.toHaveBeenCalled();
+  });
+
+  it("goes quiet, dropping the buffer, when posthog.init itself throws", async () => {
+    const { ph } = fakePostHog();
+    ph.init.mockImplementation(() => {
+      throw new Error("bad config");
+    });
+    const a = createAnalytics(async () => ph);
+    a.pageview();
+    await expect(a.init(config)).resolves.toBeUndefined();
+    a.pageview();
+    a.setUser(user());
+    expect(ph.capture).not.toHaveBeenCalled();
+    expect(ph.identify).not.toHaveBeenCalled();
+  });
+});
+
+describe("posthog-js is only imported when a key is configured", () => {
+  it("the default instance never loads posthog-js for init(null)", async () => {
+    vi.resetModules();
+    const factory = vi.fn(() => ({ default: { init: vi.fn() } }));
+    vi.doMock("posthog-js", factory);
+    const mod = await import("./analytics");
+    mod.analytics.pageview();
+    await mod.analytics.init(null);
+    mod.analytics.track({ name: "email_verified" });
+    expect(factory).not.toHaveBeenCalled();
+    vi.doUnmock("posthog-js");
+  });
+});
+
+describe("sanitizeUrl edge cases", () => {
+  it("strips tokens, redirect and checkout params in any position", () => {
+    expect(sanitizeUrl("https://x.test/reset-password?token=SECRET")).not.toContain("SECRET");
+    expect(sanitizeUrl("https://x.test/login?redirect=%2Fa&x=1")).toBe("https://x.test/login");
+    expect(sanitizeUrl("https://x.test/#/reset?token=SECRET")).toBe("https://x.test/");
+    expect(sanitizeUrl("https://x.test:8080/a/b/?checkout=success#z")).toBe(
+      "https://x.test:8080/a/b/",
+    );
+    expect(sanitizeUrl("/reset-password?token=SECRET#h")).toBe("/reset-password");
+    expect(sanitizeUrl("")).toBe("");
+  });
+});
+
+describe("before_send edge cases", () => {
+  const { before_send } = posthogOptions("https://us.i.posthog.com");
+
+  it("sanitises session-entry and initial URL props, and an external referrer", () => {
+    const out = before_send({
+      event: "x",
+      properties: {
+        $initial_referrer: "https://google.test/search?q=my+email@x.test",
+        $initial_current_url: "https://x.test/reset-password?token=SECRET",
+        $session_entry_url: "https://x.test/?checkout=success",
+        $session_entry_referrer: "https://x.test/login?redirect=/a",
+        $initial_pathname: "/a?b=1",
+      },
+    });
+    expect(JSON.stringify(out)).not.toMatch(/SECRET|email@|checkout=|redirect=|\?/);
+  });
+
+  it("leaves non-string URL props and other props untouched", () => {
+    const out = before_send({
+      event: "x",
+      properties: { $current_url: 5, $referrer: undefined, lessonId: "a?b" },
+    });
+    expect(out?.properties).toEqual({ $current_url: 5, $referrer: undefined, lessonId: "a?b" });
+  });
+});

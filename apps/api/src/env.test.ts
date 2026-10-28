@@ -74,3 +74,12 @@ it("requires APP_STAGE when POSTHOG_KEY is set", () => {
   const env = loadEnv({ ...base, POSTHOG_KEY: "phc_x", APP_STAGE: "staging" });
   expect(env.APP_STAGE).toBe("staging");
 });
+
+it("rejects a key with an empty stage, and a non-URL host", () => {
+  expect(() => loadEnv({ ...base, POSTHOG_KEY: "phc_x", APP_STAGE: "" })).toThrow(/APP_STAGE/);
+  expect(() => loadEnv({ ...base, POSTHOG_HOST: "not a url" })).toThrow();
+});
+
+it("does not need APP_STAGE when analytics is off", () => {
+  expect(loadEnv({ ...base, APP_STAGE: "prod" }).POSTHOG_KEY).toBeUndefined();
+});

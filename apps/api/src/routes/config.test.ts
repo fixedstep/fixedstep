@@ -22,3 +22,16 @@ it("hands the browser the public key, host and stage", async () => {
     analytics: { key: "phc_test", host: "https://us.i.posthog.com", stage: "staging" },
   });
 });
+
+it("keeps analytics off when a key is set without a stage", async () => {
+  const res = await app({
+    POSTHOG_KEY: "phc_test",
+    POSTHOG_HOST: "https://us.i.posthog.com",
+  }).request("/config");
+  expect(ClientConfig.parse(await res.json())).toEqual({ analytics: null });
+});
+
+it("treats an empty key as off", async () => {
+  const res = await app({ POSTHOG_KEY: "", APP_STAGE: "prod" }).request("/config");
+  expect(await res.json()).toEqual({ analytics: null });
+});

@@ -47,3 +47,15 @@ describe("isAdmin", () => {
     expect(await isAdmin(db as never, fake)).toBe(false);
   });
 });
+
+describe("isAdmin role changes", () => {
+  it("applies a revoke and a grant on the very next call", async () => {
+    const { eq } = await import("drizzle-orm");
+    const s = session("plain");
+    expect(await isAdmin(db as never, s)).toBe(false);
+    await db.update(user).set({ role: "admin" }).where(eq(user.id, "plain"));
+    expect(await isAdmin(db as never, s)).toBe(true);
+    await db.update(user).set({ role: "user" }).where(eq(user.id, "plain"));
+    expect(await isAdmin(db as never, s)).toBe(false);
+  });
+});

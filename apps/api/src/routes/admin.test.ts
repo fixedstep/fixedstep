@@ -1,12 +1,14 @@
 import { CourseMetrics } from "@fixedstep/content-schema";
 import { chapters, courses, lessons, user } from "@fixedstep/db";
 import { createTestDb } from "@fixedstep/db/testing";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { AppEnv } from "../context";
 import { adminRoutes } from "./admin";
 
 let app: Hono<AppEnv>;
+let db: Awaited<ReturnType<typeof createTestDb>>;
 
 const one = <T>(rows: T[]): T => {
   const [row] = rows;
@@ -22,7 +24,7 @@ const users: Record<string, { emailVerified: boolean; isAnonymous: boolean }> = 
 };
 
 beforeAll(async () => {
-  const db = await createTestDb();
+  db = await createTestDb();
   await db.insert(user).values([
     { id: "admin", name: "A", email: "a@t.dev", emailVerified: true, role: "admin" },
     { id: "plain", name: "P", email: "p@t.dev", emailVerified: true },
@@ -59,6 +61,9 @@ beforeAll(async () => {
     bodyMd: "",
     hiddenTests: "HIDDEN-TESTS-MARKER",
     solution: "SOLUTION-MARKER",
+    quiz: [
+      { id: "q", prompt: "p", options: ["a", "b"], answer: 1, explanation: "QUIZ-EXPLAIN-MARKER" },
+    ],
     hints: ["HINT-TEXT-MARKER"],
     contentHash: "h",
   });
@@ -106,5 +111,39 @@ describe("admin metrics", () => {
     expect(CourseMetrics.parse(await res.json()).lessons).toHaveLength(1);
     expect((await get("/admin/metrics/nope", "admin")).status).toBe(404);
     expect((await get("/admin/metrics/NOT%20A%20SLUG", "admin")).status).toBe(404);
+  });
+});
+
+describe("admin metrics: escalation and leaks", () => {
+  it("re-reads the role on every request, so a revoke applies at once", async () => {
+    expect((await get("/admin/metrics", "plain")).status).toBe(403);
+    await db.update(user).set({ role: "admin" }).where(eq(user.id, "plain"));
+    expect((await get("/admin/metrics", "plain")).status).toBe(200);
+    await db.update(user).set({ role: "user" }).where(eq(user.id, "plain"));
+    expect((await get("/admin/metrics", "plain")).status).toBe(403);
+  });
+
+  it("403s a header user that is not in the DB", async () => {
+    expect((await get("/admin/metrics", "ghost")).status).toBe(403);
+  });
+
+  it("does not run the metrics query for forbidden callers (no body leaked)", async () => {
+    const res = await get("/admin/metrics/c", "unverified");
+    expect(await res.json()).toEqual({ error: "forbidden" });
+  });
+
+  it("never returns hidden tests, solution, hint text or quiz data", async () => {
+    for (const path of ["/admin/metrics", "/admin/metrics/c"]) {
+      const text = await (await get(path, "admin")).text();
+      for (const s of [
+        "HIDDEN-TESTS-MARKER",
+        "SOLUTION-MARKER",
+        "HINT-TEXT-MARKER",
+        "QUIZ-EXPLAIN-MARKER",
+      ]) {
+        expect(text).not.toContain(s);
+      }
+      expect(text).not.toMatch(/"answer"|"hiddenTests"|"solution"|"quiz"/);
+    }
   });
 });
