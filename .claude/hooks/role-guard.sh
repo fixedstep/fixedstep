@@ -81,7 +81,8 @@ guard_course_tester() {
 
 ALLOWED_DESC='git diff/log/show/status/rev-parse/check-ignore/ls-files/merge-base, cd, pwd,
 echo, ls, cat, head, tail, wc, sort, diff, grep, rg, find, sed --sandbox -n, jq,
-node_modules/.bin/{biome check, tsc --noEmit, vitest run}, pnpm lint/typecheck/test'
+node_modules/.bin/{biome check, tsc --noEmit, vitest run}, pnpm lint/typecheck/test,
+node_modules/.bin/tsx packages/content-cli/src/cli.ts validate [dir], node odin/check.mjs [--missing]'
 
 # Splits $1 into command segments (one per line of the global `segments` array) on unquoted
 # `&&`, `||`, `;`, `|`, `&` and newlines. Blocks unquoted output redirection (other than to
@@ -269,6 +270,17 @@ check_segment() {
       ;;
     pnpm)
       [[ "$seg" =~ ^pnpm[[:space:]]+(lint|typecheck|test)([[:space:]]|$) ]] && return 0
+      ;;
+    node_modules/.bin/tsx)
+      # Only the content CLI's `validate` (the other subcommands write files), with at most a
+      # content-dir argument. tsx runs any script, so the script path is fixed.
+      [[ "$seg" =~ ^node_modules/\.bin/tsx[[:space:]]+packages/content-cli/src/cli\.ts[[:space:]]+validate([[:space:]]+[^[:space:]-][^[:space:]]*)?([[:space:]]+2>&1)?$ ]] &&
+        return 0
+      ;;
+    node)
+      # The content repo's Odin snippet check (read-only; `odin check` doesn't link), run from
+      # the content repo root.
+      [[ "$seg" =~ ^node[[:space:]]+odin/check\.mjs([[:space:]]+--missing)?([[:space:]]+2>&1)?$ ]] && return 0
       ;;
   esac
   block "'$seg' is not on the reviewer's read-only allowlist. Allowed: $ALLOWED_DESC.

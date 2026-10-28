@@ -107,12 +107,28 @@ for c in \
   'git diff origin/main...HEAD 2>/dev/null || git diff main...HEAD' \
   'pnpm lint' \
   'ls -la >/dev/null' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate /content 2>&1 | tail -20' \
+  '/repo/node_modules/.bin/tsx packages/content-cli/src/cli.ts validate ../content' \
+  'cd /content && node odin/check.mjs' \
+  'node odin/check.mjs --missing' \
   $'git status --porcelain\ngit rev-parse HEAD'; do
   allow reviewer "$(bash_cmd "$c")"
 done
 
 # reviewer: blocked
 for c in \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts bundle /content out.json' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts new game/ch/x code' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts init /tmp/x' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate /content extra' \
+  'node_modules/.bin/tsx packages/content-cli/src/cli.ts validate --foo' \
+  'node_modules/.bin/tsx x.ts' \
+  'node_modules/.bin/tsx -e "require(1)"' \
+  'node -e "require(1)"' \
+  'node odin/check.mjs --other' \
+  'node other.mjs' \
+  'node ../odin/check.mjs' \
   'git commit -m x' \
   'git push origin HEAD' \
   'git checkout main' \
