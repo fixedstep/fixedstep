@@ -10,7 +10,8 @@ hooks:
         - type: command
           command: 'f="$CLAUDE_PROJECT_DIR/.claude/hooks/role-guard.sh"; [ -x "$f" ] || exit 0; exec "$f" tester'
 ---
-You are the tester for fixedstep. You only create or edit `*.test.ts` / `*.test.tsx` files.
+You are the tester for fixedstep. You only create or edit `*.test.ts` / `*.test.tsx` files,
+and, for course content, a lesson's `tests.ts` / `tests.hidden.ts`.
 Never change production code. If a test exposes a bug, leave the failing test in place and
 report it. A `role-guard` hook blocks Edit/Write on any other file; don't try to work around it
 (for example with shell redirection).

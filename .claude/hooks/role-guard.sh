@@ -4,7 +4,8 @@
 # Reads the hook JSON on stdin. Exit 2 blocks the tool call and shows stderr to the agent; exit 0
 # allows it. Roles:
 #   designer  Edit/Write/MultiEdit/NotebookEdit only on $CLAUDE_PROJECT_DIR/tasks/**/*.md
-#   tester    Edit/Write/MultiEdit/NotebookEdit only on *.test.ts / *.test.tsx
+#   tester    Edit/Write/MultiEdit/NotebookEdit only on *.test.ts / *.test.tsx, and on a content
+#             lesson's tests.ts / tests.hidden.ts (courses/<course>/<chapter>/<lesson>/)
 #   course-tester  Edit/Write/MultiEdit/NotebookEdit only under $CLAUDE_PROJECT_DIR/e2e/
 #             (not e2e/node_modules/)
 #   reviewer  Bash limited to a read-only allowlist (git inspection, file reading, checks)
@@ -62,7 +63,11 @@ guard_tester() {
   p="$(normalize "$p")"
   case "$p" in
     *.test.ts | *.test.tsx) ;;
-    *) block "$tool on $p. The tester may only create or edit *.test.ts / *.test.tsx files." ;;
+    *)
+      # Lesson tests in a content repo (the private repo or content-sample/).
+      [[ "$p" =~ /courses/[^/]+/[^/]+/[^/]+/tests(\.hidden)?\.ts$ ]] ||
+        block "$tool on $p. The tester may only create or edit *.test.ts / *.test.tsx files and content lessons' tests.ts / tests.hidden.ts."
+      ;;
   esac
 }
 
