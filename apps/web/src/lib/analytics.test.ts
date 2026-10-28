@@ -313,4 +313,29 @@ describe("before_send edge cases", () => {
     });
     expect(out?.properties).toEqual({ $current_url: 5, $referrer: undefined, lessonId: "a?b" });
   });
+
+  it("sanitises $set_once and $set on $identify, and nested ones in properties", () => {
+    const out = before_send({
+      event: "$identify",
+      uuid: "u",
+      properties: {
+        distinct_id: "user-1",
+        $set_once: { $initial_current_url: "https://x.test/a?token=SECRET2#frag" },
+        $current_url: "https://x.test/",
+      },
+      $set: { $current_url: "https://x.test/b?token=SECRET3", name: "n" },
+      $set_once: {
+        $initial_current_url: "https://x.test/reset-password?token=SECRET",
+        $initial_pathname: "/reset-password?token=SECRET",
+        $initial_referrer: "https://google.test/?q=SECRET",
+        $session_entry_url: "https://x.test/?checkout=success#h",
+      },
+    });
+    const json = JSON.stringify(out);
+    expect(json).not.toMatch(/SECRET/);
+    expect(json).not.toContain("?");
+    expect(json).not.toContain("#");
+    expect(out?.$set_once?.$initial_current_url).toBe("https://x.test/reset-password");
+    expect(out?.$set?.name).toBe("n");
+  });
 });

@@ -8,7 +8,7 @@ import {
   lessons,
   submissions,
 } from "@fixedstep/db";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 /**
  * Per-lesson and per-course learning aggregates for admins, computed from existing tables and
@@ -46,6 +46,10 @@ export async function courseMetrics(
     )
     .orderBy(asc(courses.position), asc(chapters.position), asc(lessons.position));
 
+  if (structure.length === 0) return [];
+  const lessonIds = structure.map((r) => r.lessonId);
+  const courseIds = [...new Set(structure.map((r) => r.courseId))];
+
   // Per (lesson, user): submissions, failures, and the attempt number of the first pass.
   const ranked = db
     .select({
@@ -57,6 +61,7 @@ export async function courseMetrics(
       ),
     })
     .from(submissions)
+    .where(inArray(submissions.lessonId, lessonIds))
     .as("ranked");
   const attempts = await db
     .select({
@@ -72,7 +77,8 @@ export async function courseMetrics(
 
   const progress = await db
     .select({ lessonId: lessonProgress.lessonId, userId: lessonProgress.userId })
-    .from(lessonProgress);
+    .from(lessonProgress)
+    .where(inArray(lessonProgress.lessonId, lessonIds));
 
   const ratings = await db
     .select({
@@ -81,6 +87,7 @@ export async function courseMetrics(
       average: sql<number>`round(avg(${courseRatings.stars})::numeric, 2)`.mapWith(Number),
     })
     .from(courseRatings)
+    .where(inArray(courseRatings.courseId, courseIds))
     .groupBy(courseRatings.courseId);
   const ratingByCourse = new Map(ratings.map((r) => [r.courseId, r]));
 

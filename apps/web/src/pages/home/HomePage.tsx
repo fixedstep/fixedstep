@@ -35,7 +35,9 @@ export function HomePage() {
   const courses = useQuery({ queryKey: ["courses"], queryFn: api.courses });
   const signedIn = Boolean(me.data?.user);
 
-  // checkout_completed only from the confirmed state (me.pro), never optimistically.
+  // checkout_completed only from the confirmed state (me.pro), never optimistically. A bookmark
+  // or back-button revisit of ?checkout=success by a Pro user can double-count; the param is
+  // stripped with a history replace so a reload doesn't refire.
   const reported = useRef(false);
   const pro = me.data?.pro;
   useEffect(() => {

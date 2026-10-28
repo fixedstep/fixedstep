@@ -53,6 +53,15 @@ const URL_PROPS = [
   "$initial_pathname",
 ];
 
+function sanitizeBag(bag: unknown): void {
+  if (!bag || typeof bag !== "object") return;
+  const props = bag as Record<string, unknown>;
+  for (const key of URL_PROPS) {
+    const value = props[key];
+    if (typeof value === "string") props[key] = sanitizeUrl(value);
+  }
+}
+
 export function posthogOptions(host: string) {
   return {
     api_host: host,
@@ -64,9 +73,12 @@ export function posthogOptions(host: string) {
     person_profiles: "identified_only" as const,
     before_send: (cr: CaptureResult | null): CaptureResult | null => {
       if (!cr) return cr;
-      for (const key of URL_PROPS) {
-        const value = cr.properties[key];
-        if (typeof value === "string") cr.properties[key] = sanitizeUrl(value);
+      // Person info rides on `$identify` as top-level `$set` / `$set_once` (initial URL and
+      // referrer), and events can also nest them under `properties`.
+      for (const bag of [cr.properties, cr.$set, cr.$set_once]) {
+        sanitizeBag(bag);
+        sanitizeBag(bag?.$set);
+        sanitizeBag(bag?.$set_once);
       }
       return cr;
     },

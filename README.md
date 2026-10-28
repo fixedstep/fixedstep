@@ -241,6 +241,9 @@ name). Guests are tracked anonymously. Events: `$pageview`, `sign_up`, `email_ve
 `course_started` (first completed lesson in a course), `lesson_completed`, `checkout_started`
 and `checkout_completed` (only once the account is confirmed Pro).
 
+Known, accepted gap: a Pro user revisiting `/?checkout=success` (bookmark, back button) fires
+`checkout_completed` again; the param is stripped after the first fire, so a reload doesn't.
+
 Known, accepted gap: a full-page redirect (GitHub login, Polar checkout, the verify-email link)
 starts a new anonymous id, so funnels through those steps join only from the identified side.
 

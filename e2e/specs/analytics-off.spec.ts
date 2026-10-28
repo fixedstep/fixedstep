@@ -12,6 +12,7 @@ test("with no PostHog key the app talks to no PostHog host and stores no analyti
 
   const config = await page.request.get("/api/config");
   expect(config.ok()).toBe(true);
+  expect((await config.json()).analytics).toBeNull();
 
   await signUp(page.request);
   const id = await lessonId(request, LESSONS.reading);
