@@ -59,13 +59,21 @@ So "write your own game loop" is taught in reading lessons and Odin tabs, and gr
 
 ## Acceptance criteria
 
-- [ ] `courses/game-engine/` in the content repo with `course.yaml` (`published: false` until
+Part 1 (chapters 1–4) only; chapters 5–8 moved to task `game-engine-course-part-2`.
+
+- [x] `courses/game-engine/` in the content repo with `course.yaml` (`published: false` until
       reviewed) and the agreed chapters.
-- [ ] Every `code`/`sim` lesson has a `solution.ts` that passes its tests;
+- [x] Every `code`/`sim` lesson has a `solution.ts` that passes its tests;
       `pnpm content:validate` passes.
-- [ ] Each reading lesson has TS/Odin snippet tabs for its key code; Odin snippets compile
-      with the current Odin release (checked locally; not graded).
-- [ ] Manually played through in `pnpm content:dev`, at desktop and phone width.
+- [x] Each reading lesson has TS/Odin snippet tabs for its key code; Odin snippets compile
+      with the current Odin release (checked locally; not graded). 17 wrappers under the
+      content repo's `odin/`, `node odin/check.mjs` all ok with `dev-2026-10:84bc3fc21`.
+- [ ] Manually played through in `pnpm content:dev`, at desktop and phone width. Open: the
+      user plays it.
+
+Content PR: `fixedstep/fixedstep-content` branch `game-engine-course` → `main` (the content
+repo's default branch is `main`, not `content` as the plan below says). Reviewer approved
+`5afc717` in round 2 (round 1 on `893fe5e`: CHANGES_REQUESTED, fixed in `5afc717`).
 
 ## Plan
 
@@ -244,6 +252,8 @@ content-repo diff.
 16. `rendering-quiz` (quiz).
 
 ### Part 2 lessons (follow-up task, same conventions)
+
+Moved to task `game-engine-course-part-2`; kept here as the record of what was agreed.
 
 - **Ch 5 `input`:**
   - `input-to-actions` (reading). Tabs: raylib `IsKeyDown` / `IsKeyPressed`, and the Odin
