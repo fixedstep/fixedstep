@@ -28,6 +28,19 @@ The full steps are the "Post-merge check (lead)" section of `tasks/complete/anal
    filter.
 5. Repeat the config and check for prod after the first prod release.
 
+## Progress
+
+- 2026-10-29: shared US PostHog project created (Product analytics; autocapture, heatmaps and
+  web vitals off in onboarding). Checked locally with `APP_STAGE=local`: `/api/config` serves
+  the key; Live events showed only `$pageview`, `$identify`, `sign_up`, `email_verified`,
+  `course_started` and `lesson_completed`, each with `stage=local`, URLs without query strings,
+  and people as opaque ids only. The guest's pre-sign-up events merged into the identified
+  person. Each full page load starts a new anonymous id, then `$identify` (in-memory
+  persistence, expected). `checkout_*` not exercised.
+- `posthogKey` set in `Pulumi.aws-staging.yaml` and `Pulumi.aws-prod.yaml` (public key; prod
+  applies on the next `v*` tag). Staging deploys on merge; the staging and prod live checks,
+  `pnpm infra preview` and the admin grant follow.
+
 ## Acceptance criteria
 
 - [ ] `pnpm infra preview` is clean apart from the expected env vars on one GCP and one AWS
