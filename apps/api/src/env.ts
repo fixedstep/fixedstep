@@ -57,6 +57,12 @@ const Env = z
     POLAR_PRO_MONTHLY_PRODUCT_ID: z.string().optional(),
     POLAR_PRO_YEARLY_PRODUCT_ID: z.string().optional(),
 
+    /** PostHog public project key. Unset: analytics is off (local, e2e, CI). */
+    POSTHOG_KEY: z.string().optional(),
+    POSTHOG_HOST: z.url().default("https://us.i.posthog.com"),
+    /** `staging` / `prod`; sent to PostHog as the `stage` super property. */
+    APP_STAGE: z.string().optional(),
+
     ...emailFields,
   })
   .transform((e, ctx) => {
@@ -79,6 +85,10 @@ const Env = z
     const emailError = emailIssue(e);
     if (emailError) {
       ctx.addIssue({ code: "custom", message: emailError });
+      return z.NEVER;
+    }
+    if (e.POSTHOG_KEY && !e.APP_STAGE) {
+      ctx.addIssue({ code: "custom", message: "APP_STAGE is required when POSTHOG_KEY is set" });
       return z.NEVER;
     }
     return { ...e, DATABASE_URL: databaseUrl };

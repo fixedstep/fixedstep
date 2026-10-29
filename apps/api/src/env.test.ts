@@ -61,3 +61,25 @@ it("loads only the email settings, without DB or auth vars", () => {
   expect(() => loadEmailEnv({ ...smtp, EMAIL_FROM: "" })).toThrow(/EMAIL_FROM/);
   expect(loadEmailEnv({}).EMAIL_PROVIDER).toBe("log");
 });
+
+it("leaves analytics off by default, with the US PostHog host", () => {
+  const env = loadEnv(base);
+  expect(env.POSTHOG_KEY).toBeUndefined();
+  expect(env.POSTHOG_HOST).toBe("https://us.i.posthog.com");
+  expect(loadEnv({ ...base, POSTHOG_KEY: "" }).POSTHOG_KEY).toBeUndefined();
+});
+
+it("requires APP_STAGE when POSTHOG_KEY is set", () => {
+  expect(() => loadEnv({ ...base, POSTHOG_KEY: "phc_x" })).toThrow(/APP_STAGE/);
+  const env = loadEnv({ ...base, POSTHOG_KEY: "phc_x", APP_STAGE: "staging" });
+  expect(env.APP_STAGE).toBe("staging");
+});
+
+it("rejects a key with an empty stage, and a non-URL host", () => {
+  expect(() => loadEnv({ ...base, POSTHOG_KEY: "phc_x", APP_STAGE: "" })).toThrow(/APP_STAGE/);
+  expect(() => loadEnv({ ...base, POSTHOG_HOST: "not a url" })).toThrow();
+});
+
+it("does not need APP_STAGE when analytics is off", () => {
+  expect(loadEnv({ ...base, APP_STAGE: "prod" }).POSTHOG_KEY).toBeUndefined();
+});

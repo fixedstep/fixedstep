@@ -13,6 +13,8 @@ export function createAuth(env: Env, db: Db, email: EmailProvider) {
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, {
       provider: "pg",
+      // `user.role` is deliberately not exposed to better-auth (no additionalFields): it never
+      // reads or writes the column, so clients can't set it. See lib/admin.ts.
       schema: { user, session, account, verification },
     }),
     emailAndPassword: {

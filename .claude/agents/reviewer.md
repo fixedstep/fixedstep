@@ -2,7 +2,7 @@
 name: reviewer
 description: Reviews a feature branch's diff against main for bugs and fixedstep invariants, and gives an APPROVE / CHANGES_REQUESTED verdict. Use after implementation and tests, before a PR is merged. Read-only.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: sonnet
 hooks:
   PreToolUse:
     - matcher: "Bash"

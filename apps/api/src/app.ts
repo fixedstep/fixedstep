@@ -2,7 +2,9 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import type { AppEnv, Deps } from "./context";
+import { adminRoutes } from "./routes/admin";
 import { billingRoutes } from "./routes/billing";
+import { configRoutes } from "./routes/config";
 import { courseRoutes } from "./routes/courses";
 import { internalRoutes } from "./routes/internal";
 import { lessonRoutes } from "./routes/lessons";
@@ -33,6 +35,8 @@ export function createApp(deps: Deps) {
   app.route("/api", lessonRoutes(deps));
   app.route("/api", meRoutes(deps));
   app.route("/api", billingRoutes(deps));
+  app.route("/api", configRoutes(deps));
+  app.route("/api", adminRoutes(deps));
 
   if (deps.env.WEB_DIR) mountWeb(app, deps.env.WEB_DIR);
 

@@ -17,6 +17,7 @@ export function meRoutes({ db }: Deps) {
         email: user.email,
         image: user.image ?? null,
         isAnonymous: Boolean(user.isAnonymous),
+        emailVerified: Boolean(user.emailVerified),
       },
       ...stats,
       pro,

@@ -1,7 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { analytics } from "../lib/analytics";
 import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
+import { useAnalyticsMarkers } from "../lib/use-analytics-markers";
 import { GITHUB_URL } from "../pages/home/content";
 import { ManageBillingButton } from "./ManageBillingButton";
 
@@ -9,6 +12,12 @@ export function Layout() {
   const qc = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const href = useLocation({ select: (l) => l.href });
+  const user = me.data ? me.data.user : undefined;
+
+  useEffect(() => {
+    if (user !== undefined) analytics.setUser(user);
+  }, [user]);
+  useAnalyticsMarkers(me.data);
 
   return (
     <div className="app">
@@ -47,6 +56,7 @@ export function Layout() {
                   className="link-button"
                   onClick={async () => {
                     await authClient.signOut();
+                    analytics.setUser(null);
                     await qc.invalidateQueries();
                   }}
                 >

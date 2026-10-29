@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { analytics } from "../lib/analytics";
 import { ApiError, api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
 import { withUpgrade } from "../lib/redirect";
@@ -18,7 +19,14 @@ export function useUpgrade() {
   const href = useLocation({ select: (l) => l.href });
   const checkout = useMutation({
     mutationFn: api.checkout,
-    onSuccess: ({ url }) => window.location.assign(url),
+    onSuccess: ({ url }, interval) => {
+      // Beacon transport: the page is about to navigate away to the checkout.
+      analytics.track(
+        { name: "checkout_started", interval: interval ?? "month" },
+        { beacon: true },
+      );
+      window.location.assign(url);
+    },
   });
   const user = me.data?.user;
   const needsAccount = !user || user.isAnonymous;

@@ -1,4 +1,5 @@
 import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
+import type { AnalyticsEvent } from "./analytics";
 
 export type LessonContext = {
   course: CourseOutline;
@@ -35,4 +36,21 @@ export function findLessonContext(
     };
   }
   return null;
+}
+
+/**
+ * Analytics events for a lesson that was just completed, from the `["courses"]` outline as it
+ * was *before* the submit refetched it. Empty if the lesson was already done or isn't in the
+ * outline. `course_started` is the course's first completed lesson.
+ */
+export function completionEvents(courses: CourseOutline[], lessonId: string): AnalyticsEvent[] {
+  const ctx = findLessonContext(courses, lessonId);
+  if (!ctx || ctx.lesson.completed) return [];
+  const events: AnalyticsEvent[] = [];
+  const course = ctx.course.slug;
+  if (!ctx.course.chapters.some((c) => c.lessons.some((l) => l.completed))) {
+    events.push({ name: "course_started", course });
+  }
+  events.push({ name: "lesson_completed", course, lessonId, kind: ctx.lesson.kind });
+  return events;
 }

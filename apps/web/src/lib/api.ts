@@ -1,4 +1,5 @@
 import type {
+  ClientConfig,
   CourseOutline,
   CourseRating,
   HintStatus,
@@ -38,6 +39,7 @@ export type Me = {
     email: string;
     image: string | null;
     isAnonymous: boolean;
+    emailVerified: boolean;
   } | null;
   xp: number;
   streak: number;
@@ -59,6 +61,7 @@ export function withHintStatus<T extends { hintStatus: HintStatus }>(
 }
 
 export const api = {
+  config: () => request<ClientConfig>("/config"),
   me: () => request<Me>("/me"),
   courses: () => request<CourseOutline[]>("/courses"),
   /** Resolves to a LockedLesson (instead of throwing) when the 402 paywall applies. */

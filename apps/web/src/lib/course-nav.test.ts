@@ -1,6 +1,6 @@
 import type { CourseOutline, LessonSummary } from "@fixedstep/content-schema";
 import { describe, expect, it } from "vitest";
-import { findLessonContext } from "./course-nav";
+import { completionEvents, findLessonContext } from "./course-nav";
 
 const lesson = (id: string, completed = false): LessonSummary => ({
   id,
@@ -47,5 +47,30 @@ describe("findLessonContext", () => {
 
   it("returns null for unknown lessons", () => {
     expect(findLessonContext([course], "zzz")).toBeNull();
+  });
+});
+
+describe("completionEvents", () => {
+  const fresh: CourseOutline = {
+    ...course,
+    chapters: [{ slug: "one", title: "One", lessons: [lesson("x"), lesson("y")] }],
+  };
+
+  it("reports course_started with the first completion in a course", () => {
+    expect(completionEvents([fresh], "x")).toEqual([
+      { name: "course_started", course: "c" },
+      { name: "lesson_completed", course: "c", lessonId: "x", kind: "reading" },
+    ]);
+  });
+
+  it("reports only lesson_completed once the course has progress", () => {
+    expect(completionEvents([course], "b")).toEqual([
+      { name: "lesson_completed", course: "c", lessonId: "b", kind: "reading" },
+    ]);
+  });
+
+  it("reports nothing for an already-completed or unknown lesson", () => {
+    expect(completionEvents([course], "a")).toEqual([]);
+    expect(completionEvents([course], "zzz")).toEqual([]);
   });
 });

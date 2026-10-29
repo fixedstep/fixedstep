@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { analytics } from "../lib/analytics";
 import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
+import { withParam } from "../lib/redirect";
 
 type Mode = "signIn" | "signUp" | "forgot";
 
@@ -54,10 +56,19 @@ export function LoginPage() {
     const res =
       mode === "signIn"
         ? await authClient.signIn.email({ email, password })
-        : await authClient.signUp.email({ email, password, name, callbackURL: redirect });
+        : await authClient.signUp.email({
+            email,
+            password,
+            name,
+            // ?verified=1 lets the app tell the verify-email redirect from a plain visit.
+            callbackURL: withParam(redirect, "verified", "1"),
+          });
     if (res.error) {
       setError(res.error.message ?? "Something went wrong");
       return;
+    }
+    if (mode === "signUp") {
+      analytics.track({ name: "sign_up", method: "email", fromGuest: Boolean(guest) });
     }
     await qc.invalidateQueries();
     router.history.push(redirect);
@@ -75,7 +86,14 @@ export function LoginPage() {
       {mode !== "forgot" && (
         <button
           type="button"
-          onClick={() => authClient.signIn.social({ provider: "github", callbackURL: redirect })}
+          onClick={() =>
+            authClient.signIn.social({
+              provider: "github",
+              callbackURL: redirect,
+              // Only used for first-time GitHub sign-ins; the app records the sign_up from it.
+              newUserCallbackURL: withParam(redirect, "signed_up", "github"),
+            })
+          }
         >
           Continue with GitHub
         </button>

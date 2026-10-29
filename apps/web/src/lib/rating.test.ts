@@ -22,7 +22,7 @@ const course = (slug: string, completed = false): CourseOutline => ({
 });
 
 const me = (isAnonymous: boolean): Me => ({
-  user: { id: "u", name: "U", email: "u@test.dev", image: null, isAnonymous },
+  user: { id: "u", name: "U", email: "u@test.dev", image: null, isAnonymous, emailVerified: true },
   xp: 0,
   streak: 0,
   pro: false,
