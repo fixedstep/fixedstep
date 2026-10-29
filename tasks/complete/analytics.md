@@ -70,11 +70,15 @@ Nothing tells us how the platform is used or whether it's working for learners:
 - [ ] Product analytics: page views and the named funnel events reach the shared PostHog
       project, tagged with `stage`, from staging and prod; analytics is off when the key is
       unset (local, e2e, CI), and no cookies or local storage that need consent are set.
-- [ ] No email, name or other PII is sent to PostHog; users are identified by an opaque id.
-- [ ] Learning metrics: per-lesson and per-course aggregates are available to authors for a
+      Code side done and tested (off when unset, `persistence: "memory"`, `stage` registered
+      before any event, `analytics-off` e2e spec). Live delivery from staging and prod: moved
+      to task `analytics-live-check`.
+- [x] No email, name or other PII is sent to PostHog; users are identified by an opaque id.
+- [x] Learning metrics: per-lesson and per-course aggregates are available to authors for a
       chosen stage, computed from existing tables, and covered by tests.
-- [ ] Config lands in both the GCP and AWS targets, and the PostHog plan/cost is recorded in the
-      README.
+- [x] Config lands in both the GCP and AWS targets, and the PostHog plan/cost is recorded in the
+      README. (`pnpm infra preview` on one stack per cloud: moved to task
+      `analytics-live-check`.)
 
 ## Plan
 
