@@ -40,11 +40,22 @@ The full steps are the "Post-merge check (lead)" section of `tasks/complete/anal
 - `posthogKey` set in `Pulumi.aws-staging.yaml` and `Pulumi.aws-prod.yaml` (public key; prod
   applies on the next `v*` tag). Staging deploys on merge; the staging and prod live checks,
   `pnpm infra preview` and the admin grant follow.
+- Staging (merged as #31): `/api/config` serves the analytics block, and PostHog shows events
+  filtered on `stage = staging` (user). `pnpm infra preview -s aws-staging` (user): no env
+  changes (CI already applied them) and no new or deleted resources; only the image
+  context/hash noise of a local preview and the task definitions that follow from it.
+- Staging admin granted with the README SQL through the ops task (`ops-sql` wrapper:
+  `run-task` with the SQL in an env var, `ecs wait tasks-stopped`, then the task's log stream);
+  `/api/admin/metrics` answers (user, 2026-10-29). `v0.4.0` tagged at `e19e936` for prod.
+- Prod (`v0.4.0`): admin granted the same way; `/api/admin/metrics` answers (user, 2026-10-29).
+- GCP isn't deployed: its preview, `posthogKey` and live check moved to task
+  `gcp-stack-config` (user, 2026-10-29).
 
 ## Acceptance criteria
 
-- [ ] `pnpm infra preview` is clean apart from the expected env vars on one GCP and one AWS
-      stack.
-- [ ] Page views and the named funnel events reach the shared PostHog project tagged
-      `stage=staging` from staging, with no PII or query strings.
-- [ ] The same from prod, tagged `stage=prod`.
+- [x] `pnpm infra preview` is clean apart from the expected env vars on one GCP and one AWS
+      stack. *AWS only; GCP moved to `gcp-stack-config`.*
+- [x] Page views and the named funnel events reach the shared PostHog project tagged
+      `stage=staging` from staging, with no PII or query strings (user, 2026-10-29).
+- [x] The same from prod, tagged `stage=prod` (user, 2026-10-29). PostHog project settings
+      applied: client IP discarding on, test-account filter `stage != prod`.

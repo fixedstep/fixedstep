@@ -278,10 +278,15 @@ UPDATE "user" SET role = 'user' WHERE email = '<email>';   -- revoke
 ```
 
 Run it with `psql` against the compose database locally (`docker compose exec postgres psql -U
-fixedstep -c '…'`). On AWS, use the stack's ops task like the restore step in "Moving between
-clouds", with `command: ["sh", "-c", "psql \"$DATABASE_URL\" -c '…'"]`. On GCP, connect through
-the Cloud SQL Auth Proxy as in the dump step there. The check reads the role on every request, so
-changes apply at once.
+fixedstep -c '…'`). On AWS, `scripts/ops-sql.sh` runs it through the stack's ops task and prints
+the result (the database has no route out, so a local client can't reach it):
+
+```sh
+AWS_PROFILE=fixedstep-<stage> scripts/ops-sql.sh aws-<stage> "UPDATE \"user\" SET role = 'admin' WHERE …;"
+```
+
+On GCP, connect through the Cloud SQL Auth Proxy as in the dump step of "Moving between clouds".
+The check reads the role on every request, so changes apply at once.
 
 ### GCP setup (per stage, as a project owner)
 
