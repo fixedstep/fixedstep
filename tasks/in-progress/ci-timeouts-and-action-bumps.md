@@ -162,3 +162,47 @@ No vitest changes: there's no workflow test harness in the repo, and Biome doesn
   (not on this branch): add `.github/dependabot.yml` with the `github-actions` ecosystem. Ask
   the user before adding it as a task.
 - `.claude/` hooks and settings aren't touched.
+
+### Release-notes findings
+
+Each SHA is the peeled commit for the tag (from `git ls-remote`). Release notes come from the
+GitHub releases API, each action's README or action.yml at the tag.
+
+- `actions/checkout` v7.0.1 (`3d3c42e5aac5ba805825da76410c181273ba90b1`): v7.0.0 refuses to check
+  out fork PR code only under `pull_request_target` and `workflow_run`; we use `pull_request`,
+  `push` and `workflow_call`, so nothing changes. `persist-credentials` still defaults to true, and
+  v6 moved the stored token to `$RUNNER_TEMP`. No input changes; the node24 runtime needs runner
+  v2.327.1 or later, which GitHub-hosted runners have.
+- `pnpm/action-setup` v6.1.0 (`ea17c68df8912ef543352723c149a84f56e3d413`): the "pnpm v11+" note
+  in the README is for the new `pnpm/setup` action, which we don't adopt. v6's own example still
+  uses `version: 10`, and we omit `version`, so pnpm comes from `packageManager` (`pnpm@10.34.7`).
+  `run_install` still defaults to `'null'`, so the explicit `pnpm install` stays. No input changes.
+  Confirm on the PR run that pnpm 10.34.7 installs.
+- `actions/setup-node` v7.1.0 (`949feb2413d6458794dcd2491c4babbbce0c15c1`): v7 is an ESM migration
+  and drops the dummy `NODE_AUTH_TOKEN` export, which only matters with `registry-url` (not set).
+  Automatic caching (`package-manager-cache`, default true) applies only to npm projects, and
+  `packageManager` is pnpm, so there's no conflict with `cache: pnpm`. `node-version-file` is
+  unchanged. No input changes.
+- `actions/cache` v6.1.0 (`55cc8345863c7cc4c66a329aec7e433d2d1c52a9`): v6.0.0 is an ESM migration
+  with dependency updates; v6.1.0 handles read-only cache access. `path` and `key` are unchanged.
+  The deprecated `save-always` input isn't used. No input changes.
+- `actions/upload-artifact` v7.0.2 (`cf430e030ddbb5b0abf93d22962f4752f3646cd9`): v7 adds direct
+  single-file upload through `archive: false`. The default `archive: true` keeps our zipped
+  multi-path upload as it was. `include-hidden-files`, `retention-days` and the multi-line `path`
+  are unchanged. No input changes.
+- `google-github-actions/auth` v3.0.0 (`7c6bc770dae815cd3e89ee6cdf493a5fab2cc093`): v3 is the
+  node24 release and removes old parameters. `workload_identity_provider`, `service_account` and
+  the `create_credentials_file` default (true) are unchanged. Not exercised, since no GCP stage
+  runs (see Scope).
+- `aws-actions/configure-aws-credentials` v6.3.0 (`e1253824e5c10ff9df46874f81ed3ec929e19cfd`):
+  v6.0.0 is breaking in one way: node24, which needs runner v2.327.1 or later (fine on
+  `ubuntu-24.04`). `role-to-assume`, `aws-region` and `role-duration-seconds` are unchanged, and
+  7200 is under the 12-hour maximum. The `audience` default is still `sts.amazonaws.com`, which
+  the OIDC debug step relies on. No input changes.
+- `docker/setup-buildx-action` v4.4.1 (`f87e5991a6d7451dcb8d9637bfbc97413f497069`): v4.0.0 is
+  breaking: node24 is the default runtime, and deprecated inputs and outputs were removed. We set
+  none of them. The default driver is still `docker-container`. No input changes.
+- `pulumi/actions` v7.0.0 (`8e5e406f4007fca908480587cb9893c07090f58d`): v7 moves the runtime to
+  node24 and changes internal tooling only. `command`, `stack-name`, `work-dir` and `cloud-url` are
+  unchanged. The `pulumi-version` default is still `^3` (the v6.5.0 README says the same), and we
+  don't set `pulumi-version`, so the CLI choice is unchanged. No input changes.
