@@ -27,4 +27,5 @@ config:
     secure: v1:x2iXh54Ow3l7SeFi:oTQb9FEWMCTyeP3zr+seijtkN0ALBXI/9E5F+ocH0gRWb8snVNegBjknNOwWQfwcisQIYJ8hLRje6Is1r/iRbEAUj5yrisp+/0gJTk+OGLhfUkJOYk9sev2+bnXvfLE4V5n7wtOXwxnNtz8jwrrfcvnf6HXq0u78Jg==
   fixedstep:emailFrom: Fixedstep <noreply@fixedstep.com>
   fixedstep:emailReplyTo: admin@fixedstep.com
+  fixedstep:posthogKey: phc_xdkseFR8q6RLwD3cAXVKxe9EEZbgKQ8bBgkyo9eQ4zZ7
 encryptionsalt: v1:FuqHJgJT3Ag=:v1:tAaO+vzFCyaieQkt:JORlEgXxaGe/mh6XJwUztKAuJhB9pQ==
