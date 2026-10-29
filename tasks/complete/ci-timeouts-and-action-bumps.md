@@ -37,11 +37,14 @@ onto Node 24.
 
 ## Acceptance criteria
 
-- [ ] Every job in `ci.yml` and `deploy.yml` has a `timeout-minutes`, with the deploy value
+- [x] Every job in `ci.yml` and `deploy.yml` has a `timeout-minutes`, with the deploy value
       justified from real run durations.
-- [ ] No Node 20 deprecation warnings in a CI run.
+- [ ] No Node 20 deprecation warnings in a CI run. Moved to task `ci-action-bumps-live-check`
+      (all nine pinned actions declare `runs.using: node24`; the warnings can only be checked on
+      GitHub runs).
 - [ ] CI passes on the PR, and a staging deploy succeeds after merge (OIDC auth on both clouds
-      still works).
+      still works). Moved to task `ci-action-bumps-live-check` (post-merge deploy; GCP isn't
+      deployed). The PR's required CI check still gates the merge.
 
 ## Plan
 
