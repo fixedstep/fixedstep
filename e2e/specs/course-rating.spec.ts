@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { completeLesson, lessonId, newUser, rateCourse, signUp } from "../support/api";
 import { COURSE, LESSONS, WEB_URL } from "../support/env";
+import { expectNoPageScrollX } from "../support/layout";
 
 // Ratings are shared per course, so a retry would start with 3 ratings. Local reruns are
 // covered by start-api.ts recreating the database.
@@ -164,8 +165,6 @@ test("the rating line fits at phone width", async ({ page }) => {
   await expect(bar.getByRole("radio", { name: "Rate 1 out of 5" })).toBeVisible();
   // The outline is a closed drawer at this width; the rating doesn't need it.
   await expect(page.locator("#course-outline")).toBeHidden();
-  // Scoped to the bar: the reading lesson's own body is wider than 360px, which is a separate
-  // issue from the rating line.
   const box = await page.locator(".lesson-bar").boundingBox();
   expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
   expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(360);
@@ -174,8 +173,10 @@ test("the rating line fits at phone width", async ({ page }) => {
   expect(
     await page.locator(".lesson-bar").evaluate((el) => el.scrollWidth - el.clientWidth),
   ).toBeLessThanOrEqual(0);
+  await expectNoPageScrollX(page);
 
   await expectSteadyWhileSaving(page);
+  await expectNoPageScrollX(page);
 });
 
 for (const width of [1280, 800]) {
