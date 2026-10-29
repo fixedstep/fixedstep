@@ -136,6 +136,20 @@ describe("createAnalytics", () => {
       a.setUser(user({ id: "u2" }));
       expect(ph.identify).toHaveBeenLastCalledWith("u2");
     });
+
+    it("resets before identifying a different account, but not for anonymous to identified", async () => {
+      const { ph } = fakePostHog();
+      const a = createAnalytics(async () => ph);
+      await a.init(config);
+      a.setUser(user());
+      expect(ph.reset).not.toHaveBeenCalled();
+      a.setUser(user({ id: "u2" }));
+      expect(ph.reset).toHaveBeenCalledTimes(1);
+      expect(ph.reset.mock.invocationCallOrder[0]).toBeLessThan(
+        ph.identify.mock.invocationCallOrder[1] ?? 0,
+      );
+      expect(ph.identify).toHaveBeenLastCalledWith("u2");
+    });
   });
 });
 
@@ -361,6 +375,7 @@ describe("remote-switchable capture is pinned off", () => {
       disable_conversations: true,
       disable_web_experiments: true,
       disable_scroll_properties: true,
+      advanced_disable_flags: true,
     });
   });
 

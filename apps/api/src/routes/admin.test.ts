@@ -106,6 +106,13 @@ describe("admin metrics", () => {
     }
   });
 
+  it.each(["/admin/metrics", "/admin/metrics/c", "/admin/metrics/nope"])(
+    "%s: is not cacheable",
+    async (path) => {
+      expect((await get(path, "admin")).headers.get("cache-control")).toBe("no-store");
+    },
+  );
+
   it("serves one course, 404 for an unknown or malformed slug", async () => {
     const res = await get("/admin/metrics/c", "admin");
     expect(CourseMetrics.parse(await res.json()).lessons).toHaveLength(1);

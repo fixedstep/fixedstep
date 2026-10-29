@@ -8,6 +8,12 @@ export function adminRoutes({ db }: Pick<Deps, "db">) {
   const r = new Hono<AppEnv>();
   r.use("/admin/*", requireAdmin(db));
 
+  // Per-learner aggregates: never cache in the browser or a proxy.
+  r.use("/admin/*", async (c, next) => {
+    await next();
+    c.header("Cache-Control", "no-store");
+  });
+
   r.get("/admin/metrics", async (c) => c.json(await courseMetrics(db)));
 
   r.get("/admin/metrics/:slug", async (c) => {

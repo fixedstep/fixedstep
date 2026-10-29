@@ -141,6 +141,10 @@ export function posthogOptions(host: string) {
     disable_web_experiments: true,
     disable_scroll_properties: true,
     advanced_disable_toolbar_metrics: true,
+    // `identify()` reloads flags, and that `/flags` POST carries raw `$initial_current_url`
+    // (query included) and bypasses `before_send`. Only this sets `remoteRequestsDisabled`;
+    // `advanced_disable_feature_flags` alone doesn't stop the request.
+    advanced_disable_flags: true,
     store_google: false, // registers `ph_keyword` from search-referrer free text
     person_profiles: "identified_only" as const,
     before_send: (cr: CaptureResult | null): CaptureResult | null => {
@@ -212,8 +216,14 @@ export function createAnalytics(load: () => Promise<PostHogLike>) {
       if (id === identified) return;
       const wasIdentified = identified !== null;
       identified = id;
-      if (id) run((p) => p.identify(id));
-      else if (wasIdentified) run((p) => p.reset());
+      if (id) {
+        // Account to account: reset first so the two never merge. Anonymous to identified
+        // must not reset, so the guest funnel links.
+        run((p) => {
+          if (wasIdentified) p.reset();
+          p.identify(id);
+        });
+      } else if (wasIdentified) run((p) => p.reset());
     },
   };
 }
