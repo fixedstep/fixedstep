@@ -19,9 +19,18 @@ ARN=$(aws ecs run-task --launch-type FARGATE \
   --overrides "$(jq -n --arg cmd "$CMD" --arg sql "$SQL" \
     '{containerOverrides: [{name: "ops", command: ["sh", "-c", $cmd], environment: [{name: "SQL", value: $sql}]}]}')" \
   --query 'tasks[0].taskArn' --output text)
+if [[ $ARN != arn:* ]]; then
+  echo "run-task started no task (capacity or config failure); see the AWS console" >&2
+  exit 1
+fi
 echo "Started $ARN; waiting for it to stop (about a minute)..."
 aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$ARN"
-aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$ARN" \
-  --query 'tasks[0].{stop:stoppedReason,exit:containers[0].exitCode}' --output text
+read -r EXIT STOP < <(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$ARN" \
+  --query 'tasks[0].[containers[0].exitCode, stoppedReason]' --output text)
+# Log delivery can trail the stop by a few seconds; re-run just this call if it comes back empty.
 aws logs get-log-events --log-group-name "$(jq -r .logGroup <<<"$OPS")" \
-  --log-stream-name "ops/ops/${ARN##*/}" --query 'events[].message' --output text
+  --log-stream-name "ops/ops/${ARN##*/}" --query 'events[].message' --output json | jq -r '.[]'
+if [[ $EXIT != 0 ]]; then
+  echo "Task failed: exit $EXIT ($STOP)" >&2
+  exit 1
+fi
