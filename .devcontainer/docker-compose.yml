@@ -1,0 +1,98 @@
+# The sandboxed dev container. Start it with .devcontainer/devcontainer.sh (devcontainer CLI), not
+# plain `docker compose up`: see README.md. Self-contained on purpose: it doesn't layer on the
+# repo's docker-compose.yml or read the repo's .env, which the container can write. Its own
+# settings come from .devcontainer/.env (gitignored), which the container sees read-only.
+# Relative paths resolve against this directory. Run from the repo root (the launcher does): the
+# workspace is mounted at ${PWD}.
+name: fixedstep-dev
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: fixedstep
+      POSTGRES_PASSWORD: fixedstep
+      POSTGRES_DB: fixedstep
+    # `dev` shares this network namespace, so ports for the pair are published here. Postgres
+    # stays private (localhost inside the container); only Vite is published, and it proxies
+    # /api to the API on :3000.
+    # WEB_HOST_PORT (.devcontainer/.env) moves the host side, e.g. when another dev stack has 5173.
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-5173}:5173"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fixedstep"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TZ: ${TZ:-America/Los_Angeles}
+    image: fixedstep-devcontainer:latest
+    # Postgres is on localhost:5432, as on the host, so .env and the e2e harness need no changes.
+    network_mode: service:postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # NET_ADMIN/NET_RAW are for init-firewall.sh only; every shell and Claude session drops them
+    # (see devcontainer.sh). The image is read-only so nothing can swap the binaries those
+    # full-capability processes start from; the writable paths are the volumes and tmpfs below.
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    read_only: true
+    tmpfs:
+      - /tmp:exec,mode=1777
+      - /var/tmp:exec,mode=1777
+      - /run
+      - /root/.cache:exec
+      - /root/.config
+      - /root/.local:exec
+      - /root/.npm
+    volumes:
+      # Same absolute path as on the host: pnpm records the repo-local store's absolute path in
+      # node_modules and reinstalls everything when it changes (see pnpm-workspace.yaml).
+      - ..:${PWD}:cached
+      # Read-only over the writable workspace: this directory defines the sandbox.
+      - .:${PWD}/.devcontainer:ro
+      # The container's own Claude project-local settings in place of the host's (whose bubblewrap
+      # sandbox can't run in here). Read-only, so Claude can't widen its own permissions.
+      - ./claude-settings.local.json:${PWD}/.claude/settings.local.json:ro
+      - ${CONTENT_DIR:-../content-sample}:/content
+      - commandhistory:/commandhistory
+      - claude-config:/root/.claude
+      - playwright-browsers:/ms-playwright
+      - devcontainer-state:/root/.devcontainer
+    environment:
+      NODE_OPTIONS: --max-old-space-size=4096
+      CLAUDE_CONFIG_DIR: /root/.claude
+      DISABLE_AUTOUPDATER: "1" # the image is read-only; rebuild-clean picks up a new version
+      # No telemetry, error reporting or feature-flag fetches; the firewall blocks them anyway.
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+      IS_SANDBOX: "1" # allow --dangerously-skip-permissions as root
+      POWERLEVEL9K_DISABLE_GITSTATUS: "true"
+      ZSH_CACHE_DIR: /root/.cache/oh-my-zsh
+      ZSH_COMPDUMP: /root/.cache/zcompdump
+      DISABLE_AUTO_UPDATE: "true"
+      # Overrides .env (Node's --env-file never overwrites variables that are already set).
+      DATABASE_URL: postgres://fixedstep:fixedstep@localhost:5432/fixedstep
+      CONTENT_DIR: /content
+      # The browser's origin is the host port, which Better Auth checks. (The e2e harness sets
+      # its own.)
+      BETTER_AUTH_URL: http://localhost:${WEB_HOST_PORT:-5173}
+      WEB_ORIGIN: http://localhost:${WEB_HOST_PORT:-5173}
+      # Vite must listen on all interfaces for the published port to reach it.
+      VITE_HOST: 0.0.0.0
+    command: sleep infinity
+
+volumes:
+  pgdata:
+  commandhistory:
+  claude-config:
+  playwright-browsers:
+  devcontainer-state:

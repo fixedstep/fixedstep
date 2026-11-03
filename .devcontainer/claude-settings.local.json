@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "additionalDirectories": ["/content"],
+    "ask": ["Bash(gh pr merge:*)", "Bash(git rebase:*)", "Bash(git reset:*)"],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git config:*)",
+      "Bash(git -c:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": false
+  }
+}

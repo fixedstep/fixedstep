@@ -92,6 +92,9 @@ Prefer running on the host? `pnpm install && pnpm db:up && pnpm db:migrate && pn
 works too. Host and containers share one `node_modules` (and a repo-local `.pnpm-store/`), so you
 can switch freely; just run `docker compose` from the repo root.
 
+For running Claude Code (or anything else you don't fully trust) against the repo, there's a
+firewalled dev container on rootless Docker: see [`.devcontainer/README.md`](.devcontainer/README.md).
+
 ## Deploying
 
 Infrastructure is a Pulumi (TypeScript) program in `infra/`. Stacks are named
