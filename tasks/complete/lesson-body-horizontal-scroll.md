@@ -28,12 +28,17 @@ Repro: 360×740 viewport, sign up, open `/lessons/<what-is-a-game-loop id>`, che
 
 ## Acceptance criteria
 
-- [ ] At 360px, reading, quiz, code and sim lesson pages have no horizontal page scroll; wide
-      code blocks and tab rows scroll inside their own box.
-- [ ] An e2e check asserts `scrollWidth <= clientWidth` on a reading lesson at 360px (the
+- [x] At 360px, reading, quiz, code and sim lesson pages have no horizontal page scroll; wide
+      code blocks and tab rows scroll inside their own box. Reading, quiz, code, home and the sim
+      paywall are covered by `e2e/specs/phone-layout.spec.ts`. The Pro-only sim lesson body is
+      covered by reading the CSS (it shares every layout rule with code). It wasn't checked by
+      hand, because e2e has no way to make a Pro user.
+- [x] An e2e check asserts `scrollWidth <= clientWidth` on a reading lesson at 360px (the
       course-rating phone test can then check the whole page instead of only the bar).
-- [ ] No change at desktop widths.
-- [ ] Lint, typecheck and tests pass.
+- [x] No change at desktop widths. Checked by reading the CSS; the 800px and 1280px
+      course-rating tests still pass.
+- [x] Lint, typecheck and tests pass (biome, tsc for all 9 projects, vitest 319/319,
+      Playwright 24/24).
 
 ## Plan
 
