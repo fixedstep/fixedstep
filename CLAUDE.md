@@ -22,6 +22,14 @@
   `content:*` scripts (and the compose `/content` mount) at the private repo; the content repo
   skeleton is `packages/content-cli/template/` (dotfiles stored as `_name`), used by `init`.
 
+## Dev container
+
+`.devcontainer/` (see its README) is a firewalled container where `DEVCONTAINER=true`. In there,
+Claude's sandbox is off, `pnpm` is on PATH, Postgres is on `localhost:5432`, and git runs
+normally. But `.devcontainer/` is read-only, and the container has no GitHub credentials, so
+`git fetch`/`push` and `gh` don't work: the user runs those on the host. The sandbox rules below
+apply on the host.
+
 ## Running checks (agents and sandbox)
 
 Run these from the repo root, verbatim. Once `.claude/hooks/role-guard.sh` is installed, it

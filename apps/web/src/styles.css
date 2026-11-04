@@ -110,6 +110,8 @@ button.primary,
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
@@ -128,6 +130,7 @@ button.primary,
 }
 .topbar-right {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }
@@ -142,6 +145,7 @@ main {
 
 .lesson {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 .lesson-code,
@@ -151,13 +155,18 @@ main {
 @media (max-width: 900px) {
   .lesson-code,
   .lesson-sim {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .lesson-body,
 .lesson-reading,
 .lesson-quiz {
   max-width: 760px;
+  overflow-wrap: break-word;
+}
+.prose img {
+  max-width: 100%;
+  height: auto;
 }
 .workspace {
   display: flex;
@@ -411,12 +420,18 @@ kbd {
 .tab-row {
   display: flex;
   gap: 4px;
+  overflow-x: auto;
 }
 .tab {
+  flex: none;
+  white-space: nowrap;
   border-radius: 8px 8px 0 0;
   border-bottom: none;
   font-size: 13px;
   padding: 4px 12px;
+}
+.tab:focus-visible {
+  outline-offset: -2px;
 }
 .tab.active {
   background: var(--code-bg);
@@ -428,6 +443,7 @@ kbd {
 }
 
 .quiz fieldset {
+  min-inline-size: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   margin: 0 0 12px;
@@ -528,7 +544,7 @@ kbd {
 }
 .tweaks label {
   display: grid;
-  grid-template-columns: minmax(80px, auto) 1fr 4.5em;
+  grid-template-columns: minmax(80px, auto) minmax(0, 1fr) 4.5em;
   gap: 8px;
   align-items: center;
   font-size: 14px;
@@ -698,7 +714,7 @@ kbd {
 }
 @media (max-width: 900px) {
   .hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 32px;
     padding-top: 16px;
   }
@@ -826,7 +842,7 @@ kbd {
 }
 .chapters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 8px 32px;
   margin-top: 20px;
 }
@@ -1068,7 +1084,7 @@ kbd {
 }
 .prev-next {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 40px;
 }

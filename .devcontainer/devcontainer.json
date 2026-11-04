@@ -1,0 +1,16 @@
+{
+  "name": "fixedstep",
+  "dockerComposeFile": ["docker-compose.yml"],
+  "service": "dev",
+  "runServices": ["postgres", "dev"],
+  // Same path as on the host; docker-compose.yml mounts the repo at ${PWD}.
+  "workspaceFolder": "${localWorkspaceFolder}",
+  "remoteUser": "root",
+  // The probe runs a login shell with full capabilities, sourcing files the container can write.
+  "userEnvProbe": "none",
+  // Runs once, before the firewall is first up (the browser download needs Playwright's CDN), with
+  // NET_ADMIN/NET_RAW dropped like every other session.
+  "postCreateCommand": "/usr/bin/setpriv --inh-caps=-net_admin,-net_raw --bounding-set=-net_admin,-net_raw -- sh -c 'pnpm install --frozen-lockfile && pnpm --filter @fixedstep/e2e exec playwright install --only-shell chromium'",
+  "postStartCommand": "/usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}
