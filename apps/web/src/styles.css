@@ -589,6 +589,7 @@ kbd {
 }
 .site-footer nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
 }
 .site-footer a {
@@ -597,6 +598,17 @@ kbd {
 }
 .site-footer a:hover {
   color: var(--text);
+}
+
+/* ---------- Legal ---------- */
+.legal {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 0 16px;
+  overflow-wrap: break-word;
+}
+.legal-notice {
+  font-size: 13px;
 }
 
 /* ---------- Home ---------- */

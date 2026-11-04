@@ -77,6 +77,8 @@ export function Layout() {
         <nav>
           <Link to="/">Courses</Link>
           <a href="/#pricing">Pricing</a>
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
           <a href={GITHUB_URL} target="_blank" rel="noreferrer">
             GitHub
           </a>
