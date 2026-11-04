@@ -29,7 +29,7 @@ You agree not to:
 - You can cancel at any time from "Manage billing" on the site. You keep Pro until the end of the period you have paid for.
 - Refunds are handled under Polar's terms: {{polarTermsUrl}}.
 - If a payment fails, Pro may end at the end of the current period.
-- If your subscription is paused, you lose Pro access straight away and keep it only once the subscription is resumed.
+- If your subscription is paused, you lose Pro access until the subscription is resumed.
 
 ## Course content
 

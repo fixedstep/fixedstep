@@ -57,13 +57,16 @@ The platform collects personal data and takes payments, but publishes no privacy
 
 ## Acceptance criteria
 
-- [ ] A first-draft privacy policy covering every data type and processor listed above, checked
+- [x] A first-draft privacy policy covering every data type and processor listed above, checked
       against the code, with user-only facts marked `TODO(user)` or filled in by the user.
-- [ ] A first-draft terms of service covering accounts, acceptable use, subscriptions and
+      (Contact email, minimum age and PostHog IP discarding were filled in by the user. The
+      operator, jurisdiction and Polar refund URL stay `TODO(user)` in
+      `apps/web/src/legal/facts.ts`.)
+- [x] A first-draft terms of service covering accounts, acceptable use, subscriptions and
       refunds, content IP, liability and governing law.
-- [ ] `/privacy` and `/terms` pages, linked site-wide and from sign-up and checkout, with an
+- [x] `/privacy` and `/terms` pages, linked site-wide and from sign-up and checkout, with an
       effective date.
-- [ ] The README's PostHog follow-up line is replaced with a pointer to the pages.
+- [x] The README's PostHog follow-up line is replaced with a pointer to the pages.
 
 ## Plan
 
