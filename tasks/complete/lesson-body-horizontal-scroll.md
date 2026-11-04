@@ -32,7 +32,8 @@ Repro: 360×740 viewport, sign up, open `/lessons/<what-is-a-game-loop id>`, che
       code blocks and tab rows scroll inside their own box. Reading, quiz, code, home and the sim
       paywall are covered by `e2e/specs/phone-layout.spec.ts`. The Pro-only sim lesson body is
       covered by reading the CSS (it shares every layout rule with code). It wasn't checked by
-      hand, because e2e has no way to make a Pro user.
+      hand, because e2e has no way to make a Pro user. The e2e check for it is in task
+      `e2e-pro-user`.
 - [x] An e2e check asserts `scrollWidth <= clientWidth` on a reading lesson at 360px (the
       course-rating phone test can then check the whole page instead of only the bar).
 - [x] No change at desktop widths. Checked by reading the CSS; the 800px and 1280px
@@ -180,4 +181,4 @@ compare a 1280px screenshot of the reading lesson and home before and after.
   vertical overflow, so no scrollbar should appear. Verify there's no 1px vertical scrollbar in
   Chrome at desktop.
 - The topbar now wraps for Pro users at phone width (second row). That's intended, but untested
-  by e2e (no Pro seam).
+  by e2e (no Pro seam). The e2e check for it is in task `e2e-pro-user`.
