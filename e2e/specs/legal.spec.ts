@@ -36,6 +36,37 @@ test("the sign-up page links to the terms and privacy policy", async ({ page }) 
   );
 });
 
+test("legal pages render Markdown as HTML with no raw tokens", async ({ page }) => {
+  for (const path of ["/privacy", "/terms"]) {
+    await page.goto(path);
+    const legal = page.locator(".legal");
+    await expect(legal.locator("h1")).toBeVisible();
+    await expect(legal.getByRole("heading", { level: 2 }).first()).toBeVisible();
+    await expect(legal).not.toContainText("{{");
+    await expect(legal).not.toContainText(/^#{1,6}\s/m);
+  }
+});
+
+test("the sign-in page shows the agree notice but forgot-password does not", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.locator(".legal-notice")).toBeVisible();
+  await page.getByRole("button", { name: "Forgot password?" }).click();
+  await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
+  await expect(page.locator(".legal-notice")).toHaveCount(0);
+});
+
+test("the home pricing section shows the Polar notice", async ({ page }) => {
+  await page.goto("/");
+  const pricing = page.locator("#pricing");
+  await expect(
+    pricing.locator(".legal-notice").filter({ hasText: "merchant of record" }),
+  ).toBeVisible();
+  await expect(pricing.getByRole("link", { name: "Terms of Service" })).toHaveAttribute(
+    "href",
+    "/terms",
+  );
+});
+
 test("the Pro upgrade on a paid lesson shows the Polar notice", async ({ page }) => {
   await signUp(page.request);
   const id = await lessonId(page.request, LESSONS.paid);
