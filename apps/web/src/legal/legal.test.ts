@@ -52,3 +52,30 @@ describe("legal pages", () => {
     expect(TERMS).toContain(LEGAL_FACTS.polarTermsUrl);
   });
 });
+
+describe("legal facts and tokens", () => {
+  const tokens = (md: string) => [...md.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+  const used = new Set([...tokens(privacyMd), ...tokens(termsMd)]);
+
+  it("only uses tokens that exist in LEGAL_FACTS", () => {
+    for (const t of used) expect(Object.keys(LEGAL_FACTS)).toContain(t);
+  });
+
+  it("uses every fact in at least one page", () => {
+    for (const key of Object.keys(LEGAL_FACTS)) expect(used).toContain(key);
+  });
+
+  it("has a valid ISO effective date that is not in the future", () => {
+    const d = LEGAL_FACTS.effectiveDate;
+    expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const parsed = new Date(`${d}T00:00:00Z`);
+    expect(Number.isNaN(parsed.getTime())).toBe(false);
+    expect(parsed.toISOString().slice(0, 10)).toBe(d);
+    expect(parsed.getTime()).toBeLessThanOrEqual(Date.now() + 24 * 3600 * 1000);
+  });
+
+  it("has a contact email and numeric minimum age", () => {
+    expect(LEGAL_FACTS.contactEmail).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/);
+    expect(Number(LEGAL_FACTS.minimumAge)).toBeGreaterThan(0);
+  });
+});
