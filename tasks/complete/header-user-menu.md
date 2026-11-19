@@ -31,15 +31,16 @@ options.
 
 ## Acceptance criteria
 
-- [ ] Signed-in users open a dropdown from the header with Settings, Manage billing (pro only)
+- [x] Signed-in users open a dropdown from the header with Settings, Manage billing (pro only)
       and Sign out. Sign out behaves as it does today (`analytics.setUser(null)`, queries
-      invalidated).
-- [ ] Guests still see "Save progress" and no Sign out.
-- [ ] Mouse and keyboard both work, and the ARIA roles and states are correct.
-- [ ] `/settings` exists and is reachable from the menu.
-- [ ] No horizontal scroll at 375px width.
-- [ ] e2e: open the menu, go to settings, sign out.
-- [ ] Lint, typecheck and tests pass.
+      invalidated). Note: Manage billing for Pro is covered by the `UserMenu.test.ts` markup
+      test only (e2e has no Pro user); a manual click-through is listed in the PR.
+- [x] Guests still see "Save progress" and no Sign out.
+- [x] Mouse and keyboard both work, and the ARIA roles and states are correct.
+- [x] `/settings` exists and is reachable from the menu.
+- [x] No horizontal scroll at 375px width.
+- [x] e2e: open the menu, go to settings, sign out.
+- [x] Lint, typecheck and tests pass.
 
 ## Plan
 
