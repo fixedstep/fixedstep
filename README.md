@@ -262,7 +262,10 @@ PostHog project settings to apply once:
   and turn the test-account toggle off. Keep the test-account filter on for funnel and retention
   insights.
 
-The privacy policy and terms don't name PostHog yet (a follow-up task).
+The privacy policy (`/privacy`) and terms (`/terms`) name PostHog and the rest of the processors.
+Their sources are in `apps/web/src/legal/`, with the operator facts in `facts.ts`. Update them, and
+bump `effectiveDate` there, whenever a processor, a stored data type, a cookie or local storage key
+or a retention period changes.
 
 ### Learning metrics (admins)
 
@@ -290,6 +293,25 @@ AWS_PROFILE=fixedstep-<stage> scripts/ops-sql.sh aws-<stage> "UPDATE \"user\" SE
 
 On GCP, connect through the Cloud SQL Auth Proxy as in the dump step of "Moving between clouds".
 The check reads the role on every request, so changes apply at once.
+
+### Account deletion requests
+
+Users can't delete their account in the app yet, so requests arrive by email (see the privacy
+policy). For each request:
+
+1. Cancel the user's Pro subscription in Polar, if they have one.
+2. Delete the account's data. The user delete cascades to its rows, but not to its billing events
+   (no foreign key), so purge those first, while the user id can still be read. Run these through
+   `scripts/ops-sql.sh` as in the admin section:
+
+   ```sql
+   SELECT id FROM "user" WHERE email = '<email>';
+   DELETE FROM billing_events WHERE payload->'data'->'customer'->>'external_id' = '<user id>';
+   DELETE FROM "user" WHERE email = '<email>';   -- expecting DELETE 1
+   ```
+
+3. Delete the person's PostHog profile by user id.
+4. Reply to the requester to confirm.
 
 ### GCP setup (per stage, as a project owner)
 

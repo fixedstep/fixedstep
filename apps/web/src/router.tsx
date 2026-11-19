@@ -1,8 +1,10 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { Layout } from "./components/Layout";
 import { NotFound } from "./components/NotFound";
+import { PRIVACY, TERMS } from "./legal/legal";
 import { isSafeRedirect } from "./lib/redirect";
 import { HomePage } from "./pages/home/HomePage";
+import { LegalPage } from "./pages/LegalPage";
 import { LessonPage } from "./pages/LessonPage";
 import { LoginPage, type LoginSearch } from "./pages/LoginPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
@@ -31,6 +33,16 @@ const routeTree = rootRoute.addChildren([
     getParentRoute: () => rootRoute,
     path: "/reset-password",
     component: ResetPasswordPage,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/privacy",
+    component: () => <LegalPage source={PRIVACY} />,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/terms",
+    component: () => <LegalPage source={TERMS} />,
   }),
 ]);
 

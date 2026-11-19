@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { AgreeNotice } from "../components/LegalNotice";
 import { analytics } from "../lib/analytics";
 import { api } from "../lib/api";
 import { authClient } from "../lib/auth-client";
@@ -127,6 +128,7 @@ export function LoginPage() {
           {SUBMIT_LABELS[mode]}
         </button>
       </form>
+      {mode !== "forgot" && <AgreeNotice lead="By creating an account or continuing with GitHub" />}
       {mode === "signIn" && (
         <button type="button" className="link-button" onClick={() => switchMode("forgot")}>
           Forgot password?

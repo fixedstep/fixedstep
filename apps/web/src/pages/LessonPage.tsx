@@ -12,6 +12,7 @@ import { CompletionCard } from "../components/CompletionCard";
 import { EditorThemePicker } from "../components/EditorThemePicker";
 import { GuestNudge } from "../components/GuestNudge";
 import { HintsPanel } from "../components/HintsPanel";
+import { AgreeNotice } from "../components/LegalNotice";
 import { LessonShell } from "../components/LessonShell";
 import { Markdown } from "../components/Markdown";
 import { NotFound } from "../components/NotFound";
@@ -81,6 +82,7 @@ function Paywall({ title }: { title: string }) {
             ? "Create an account to upgrade"
             : "Upgrade to Pro"}
       </button>
+      <AgreeNotice lead="Payments are handled by Polar, our merchant of record. By upgrading" />
       {needsAccount && (
         <p className="muted">
           Already have an account?{" "}

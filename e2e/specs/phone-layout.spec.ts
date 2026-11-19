@@ -72,3 +72,13 @@ test("a sim lesson's paywall has no sideways page scroll", async ({ page }) => {
   await expect(page.getByText("Upgrade to Pro").first()).toBeVisible();
   await expectNoPageScrollX(page);
 });
+
+test("the privacy and terms pages have no sideways page scroll", async ({ page }) => {
+  await page.goto("/privacy");
+  await expect(page.getByRole("heading", { level: 1, name: "Privacy policy" })).toBeVisible();
+  await expectNoPageScrollX(page);
+
+  await page.goto("/terms");
+  await expect(page.getByRole("heading", { level: 1, name: "Terms of Service" })).toBeVisible();
+  await expectNoPageScrollX(page);
+});

@@ -2,6 +2,7 @@ import type { CourseOutline } from "@fixedstep/content-schema";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { AgreeNotice } from "../../components/LegalNotice";
 import { ManageBillingButton } from "../../components/ManageBillingButton";
 import { Playground } from "../../components/Playground";
 import { CourseListSkeleton } from "../../components/Skeleton";
@@ -279,6 +280,7 @@ function Pricing() {
                 ? "Create an account to upgrade"
                 : "Upgrade to Pro"}
           </button>
+          <AgreeNotice lead="Payments are handled by Polar, our merchant of record. By upgrading" />
           <UpgradeErrors checkout={checkout} />
         </div>
       </div>
