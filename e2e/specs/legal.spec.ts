@@ -81,10 +81,10 @@ test("the Pro upgrade on a paid lesson shows the Polar notice", async ({ page })
 test("the cookies and local storage the policy describes are the only ones set", async ({
   page,
 }) => {
-  await signUp(page.request);
+  const user = await signUp(page.request);
   const id = await lessonId(page.request, LESSONS.reading);
   await page.goto(`/lessons/${id}`);
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: user.name })).toBeVisible();
 
   const cookies = await page.context().cookies();
   expect(cookies.length).toBeGreaterThan(0);

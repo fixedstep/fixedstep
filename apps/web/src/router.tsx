@@ -8,6 +8,7 @@ import { LegalPage } from "./pages/LegalPage";
 import { LessonPage } from "./pages/LessonPage";
 import { LoginPage, type LoginSearch } from "./pages/LoginPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 const rootRoute = createRootRoute({ component: Layout, notFoundComponent: () => <NotFound /> });
 
@@ -34,6 +35,7 @@ const routeTree = rootRoute.addChildren([
     path: "/reset-password",
     component: ResetPasswordPage,
   }),
+  createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage }),
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/privacy",

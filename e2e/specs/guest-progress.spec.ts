@@ -32,6 +32,9 @@ test("a guest passes a code lesson, then signs up and keeps their progress", asy
   await expect(page.getByText("+10 XP")).toBeVisible();
   await expect(page.getByTitle("Experience")).toHaveText("⭐ 10 XP");
   await expect(page.getByRole("link", { name: "Save progress" })).toBeVisible();
+  // Guests get no account menu, so no sign-out either.
+  await expect(page.getByRole("banner").locator('[aria-haspopup="menu"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 
   await page.getByRole("link", { name: "Create a free account" }).click();
   await expect(page.getByRole("heading", { name: "Save your progress" })).toBeVisible();
@@ -42,7 +45,7 @@ test("a guest passes a code lesson, then signs up and keeps their progress", asy
   await page.getByRole("button", { name: "Sign up", exact: true }).click();
 
   await expect(page).toHaveURL(new RegExp(`/lessons/${id}$`));
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("button", { name: user.name })).toBeVisible();
   await expect(page.getByTitle("Experience")).toHaveText("⭐ 10 XP");
   await expect(page.getByRole("heading", { level: 1 }).getByTitle("Completed")).toBeVisible();
 

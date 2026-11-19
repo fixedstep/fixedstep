@@ -14,12 +14,12 @@ test("with no PostHog key the app talks to no PostHog host and stores no analyti
   expect(config.ok()).toBe(true);
   expect((await config.json()).analytics).toBeNull();
 
-  await signUp(page.request);
+  const user = await signUp(page.request);
   const id = await lessonId(request, LESSONS.reading);
   await page.goto(`/lessons/${id}`);
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: user.name })).toBeVisible();
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: user.name })).toBeVisible();
 
   expect(hosts.filter((h) => h.endsWith("posthog.com"))).toEqual([]);
 
