@@ -30,12 +30,22 @@ No API change: the routes keep filtering on `published`, so nothing new reaches 
 
 ## Acceptance criteria
 
-- [ ] `scripts/in-docker.sh pnpm content:preview` shows `published: false` courses in the local
-      app and re-syncs on save.
-- [ ] Preview mode is refused against a non-local `DATABASE_URL`; `bundle` and the publish
+- [x] `scripts/in-docker.sh pnpm content:preview` shows `published: false` courses in the local
+      app and re-syncs on save. Checked in the dev container (no Docker there, so `pnpm
+      content:preview` directly, against a scratch DB and a copy of `content-sample/` set to
+      `published: false`): a plain `content:sync` left `/api/courses` empty; under preview the
+      course appeared on the home page in headless Chromium; a title edit in `course.yaml`
+      re-synced and showed in the page; a plain `content:sync` afterwards hid it again. The
+      `in-docker.sh` form runs the same script with host `postgres`, which the guard accepts.
+- [x] Preview mode is refused against a non-local `DATABASE_URL`; `bundle` and the publish
       workflow are unaffected.
-- [ ] Unit tests for the flag (the sync uses `published: true` only in preview) and the guard.
-- [ ] README documents the command.
+- [x] Unit tests for the flag (the sync uses `published: true` only in preview) and the guard.
+- [x] README documents the command.
+
+**Outcome note:** the guard ended up stricter than the plan below. postgres.js 3.4.9 dials the
+URL hostname and ignores `?host=`, so the URL hostname must always be local; a `?host=` must
+additionally be one local value or socket path. URLs with `hostaddr`/`port`/`service` params,
+a comma or more than one `@` in the authority are refused.
 
 ## Plan
 
