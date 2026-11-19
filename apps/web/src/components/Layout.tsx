@@ -1,15 +1,13 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { analytics } from "../lib/analytics";
 import { api } from "../lib/api";
-import { authClient } from "../lib/auth-client";
 import { useAnalyticsMarkers } from "../lib/use-analytics-markers";
 import { GITHUB_URL } from "../pages/home/content";
-import { ManageBillingButton } from "./ManageBillingButton";
+import { UserMenu } from "./UserMenu";
 
 export function Layout() {
-  const qc = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const href = useLocation({ select: (l) => l.href });
   const user = me.data ? me.data.user : undefined;
@@ -35,14 +33,9 @@ export function Layout() {
               <span className="stat" title="Experience">
                 ⭐ {me.data.xp} XP
               </span>
-              {me.data.pro && (
-                <>
-                  <span className="badge">PRO</span>
-                  <ManageBillingButton />
-                </>
-              )}
+              {me.data.pro && <span className="badge topbar-pro">PRO</span>}
               {me.data.user.isAnonymous ? (
-                // No sign-out for guests: it would orphan their progress.
+                // No account menu for guests: sign-out would orphan their progress.
                 <Link
                   to="/login"
                   search={{ mode: "signUp", redirect: href }}
@@ -51,17 +44,7 @@ export function Layout() {
                   Save progress
                 </Link>
               ) : (
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={async () => {
-                    await authClient.signOut();
-                    analytics.setUser(null);
-                    await qc.invalidateQueries();
-                  }}
-                >
-                  Sign out
-                </button>
+                <UserMenu user={me.data.user} pro={me.data.pro} />
               )}
             </>
           ) : (
