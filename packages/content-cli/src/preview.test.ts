@@ -34,7 +34,21 @@ describe("splitPreviewFlag", () => {
   });
 });
 
+describe("splitPreviewFlag edge cases", () => {
+  it("removes every occurrence and ignores near-misses", () => {
+    expect(splitPreviewFlag(["--preview", "sync", "--preview", "--previews", "-preview"])).toEqual({
+      preview: true,
+      args: ["sync", "--previews", "-preview"],
+    });
+    expect(splitPreviewFlag([])).toEqual({ preview: false, args: [] });
+  });
+});
+
 describe("asPreview", () => {
+  it("handles an empty list", () => {
+    expect(asPreview([])).toEqual([]);
+  });
+
   it("publishes every course without changing the input", () => {
     const hidden = course("draft", false);
     const live = course("live", true);
@@ -75,7 +89,68 @@ describe("isLocalDatabaseUrl", () => {
   });
 });
 
+describe("isLocalDatabaseUrl edge cases", () => {
+  it.each([
+    "postgresql://u:p@localhost/x",
+    "postgresql://u:p@LocalHost:5433/x",
+    "postgres://u@[0:0:0:0:0:0:0:1]/x",
+    "postgres://u@localhost/x?host=LOCALHOST",
+    "postgres://u@evil.com/x?host=localhost",
+    "postgres://u@localhost/x?host=%2Fvar%2Frun%2Fpostgresql",
+    "postgres://u@localhost:5432/x?sslmode=disable",
+  ])("accepts %s", (url) => {
+    expect(isLocalDatabaseUrl(url)).toBe(true);
+  });
+
+  it.each([
+    "postgres://localhost@evil.com/db",
+    "postgres://localhost:pw@evil.com/db",
+    "postgres://u@localhost./x",
+    "postgres://u@loc%61lhost/x",
+    "postgres://u@localhost%2Eevil.com/x",
+    "postgres://u@localhost/x?host=",
+    "postgres://u@localhost/x?host=evil.com",
+    "postgres://u@localhost/x?host=localhost,evil.com",
+    "postgres://u@localhost/x?host=a&host=b",
+    "postgres://u@[::ffff:127.0.0.1]/x",
+    "postgres://u@[::2]/x",
+    "postgres://u@127.1/x",
+    "postgres://u@2130706433/x",
+    "postgres://u@0.0.0.0/x",
+    "postgres://u@localhost:abc/x",
+    "",
+  ])("refuses %s", (url) => {
+    expect(isLocalDatabaseUrl(url)).toBe(false);
+  });
+
+  // Production bugs: a multi-host libpq list whose first entry is a socket dir, and hostaddr,
+  // both let a non-local server be reached while the guard sees "local".
+  it("refuses a ?host= list that starts with a socket path but names a remote host", () => {
+    expect(isLocalDatabaseUrl("postgres://u@localhost/x?host=/tmp,evil.com")).toBe(false);
+  });
+
+  it("refuses ?hostaddr= pointing at a remote address", () => {
+    expect(isLocalDatabaseUrl("postgres://u@localhost/x?hostaddr=10.0.0.5")).toBe(false);
+  });
+});
+
 describe("assertPreviewDatabase", () => {
+  it("throws for an empty string and an unparseable URL", () => {
+    expect(() => assertPreviewDatabase("")).toThrow(/host is unset/);
+    expect(() => assertPreviewDatabase("not a url")).toThrow(/host is unparseable/);
+  });
+
+  it("names the ?host= override, not the URL host, and hides the password", () => {
+    let message = "";
+    try {
+      assertPreviewDatabase("postgres://u:s3cret@localhost/x?host=evil.example");
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain("evil.example");
+    expect(message).not.toContain("s3cret");
+  });
+
   it("throws when DATABASE_URL is unset", () => {
     expect(() => assertPreviewDatabase(undefined)).toThrow(/DATABASE_URL host is unset/);
   });
