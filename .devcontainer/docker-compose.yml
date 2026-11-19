@@ -16,9 +16,10 @@ services:
     # `dev` shares this network namespace, so ports for the pair are published here. Postgres
     # stays private (localhost inside the container); only Vite is published, and it proxies
     # /api to the API on :3000.
-    # WEB_HOST_PORT (.devcontainer/.env) moves the host side, e.g. when another dev stack has 5173.
+    # Host side defaults to 5175, not 5173, so it runs alongside a host `pnpm dev`/`docker compose
+    # up` or another dev container on 5173 (and clear of e2e on 5174). WEB_HOST_PORT moves it.
     ports:
-      - "127.0.0.1:${WEB_HOST_PORT:-5173}:5173"
+      - "127.0.0.1:${WEB_HOST_PORT:-5175}:5173"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -84,8 +85,8 @@ services:
       CONTENT_DIR: /content
       # The browser's origin is the host port, which Better Auth checks. (The e2e harness sets
       # its own.)
-      BETTER_AUTH_URL: http://localhost:${WEB_HOST_PORT:-5173}
-      WEB_ORIGIN: http://localhost:${WEB_HOST_PORT:-5173}
+      BETTER_AUTH_URL: http://localhost:${WEB_HOST_PORT:-5175}
+      WEB_ORIGIN: http://localhost:${WEB_HOST_PORT:-5175}
       # Vite must listen on all interfaces for the published port to reach it.
       VITE_HOST: 0.0.0.0
     command: sleep infinity

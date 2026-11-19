@@ -65,7 +65,7 @@ The container doesn't read the repo's `.env` (see "What the sandbox protects"), 
 ```sh
 CONTENT_DIR=/home/you/source/fixedstep-content   # default: content-sample
 TZ=America/Los_Angeles
-WEB_HOST_PORT=5175   # host port for Vite (default 5173), when another stack already has 5173
+WEB_HOST_PORT=5176   # host port for Vite (default 5175), when another stack already has 5175
 ```
 
 `WEB_HOST_PORT` also sets the API's `BETTER_AUTH_URL`/`WEB_ORIGIN` to match. If you use GitHub OAuth locally, its callback URL has to use the same port.
@@ -97,7 +97,7 @@ Inside the container everything works as on the host, with Postgres already up:
 
 ```sh
 pnpm db:migrate && pnpm content:sync   # first time
-pnpm dev                               # API + web; open http://localhost:5173 on the host
+pnpm dev                               # API + web; open http://localhost:5175 on the host
 pnpm lint && pnpm typecheck && pnpm test
 pnpm e2e                               # Chromium is preinstalled
 ```
@@ -140,7 +140,7 @@ curl -sI https://example.com       # fails: blocked by the firewall
 - **Workspace path:** the repo is mounted at the **same absolute path** as on the host (like the root `docker-compose.yml`), because pnpm records the repo-local `.pnpm-store`'s absolute path in `node_modules`; a different path would make host and container keep reinstalling each other's `node_modules`. The compose file uses `${PWD}`, so it must be started from the repo root, which the script does.
 - **Postgres:** the `dev` container shares the `postgres` container's network namespace, so Postgres is on `localhost:5432` inside it, same as on the host. `.env`, `DATABASE_URL` and the e2e harness (`fixedstep_e2e`) need no changes.
 - **Separate data:** the compose project is `fixedstep-dev`, so its Postgres volume is separate from the one the host's `pnpm db:up` / `docker compose up` uses, and it doesn't publish 5432. Both can run at once.
-- **Ports:** only Vite (`127.0.0.1:5173`) is published to the host; it proxies `/api` to the API on `:3000` inside the container. The container sets `VITE_HOST=0.0.0.0`, which `apps/web/vite.config.ts` reads, so the published port can reach Vite. A host `docker compose up` (which also publishes 5173) and this container can't run at the same time.
+- **Ports:** only Vite is published to the host, as `127.0.0.1:5175` (container port 5173); it proxies `/api` to the API on `:3000` inside the container. The container sets `VITE_HOST=0.0.0.0`, which `apps/web/vite.config.ts` reads, so the published port can reach Vite. The host port is 5175 so it doesn't clash with a host `pnpm dev`/`docker compose up` or another project's dev container on 5173, nor with e2e on 5174.
 - **Content:** `CONTENT_DIR` from `.devcontainer/.env` (default `content-sample`) is mounted at `/content`.
 - **File ownership:** the container runs as root, which under rootless Docker maps to your host user. Files written to the workspace (`node_modules`, `.pnpm-store`, commits) stay owned by you.
 - **Playwright:** Chromium's system libraries are baked into the image; the browser is downloaded by `postCreateCommand` (before the firewall is up) into the `playwright-browsers` volume.
@@ -155,5 +155,5 @@ curl -sI https://example.com       # fails: blocked by the firewall
 - **`Failed to download Chrome Headless Shell` / `Could not resolve host` / no network at all:** if `docker exec fixedstep-dev-postgres-1 cat /etc/resolv.conf` shows `127.0.0.53` (not `127.0.0.11`), the containers lost their network, which happens when they're restarted after the rootless Docker daemon restarted. Recreate them: `.devcontainer/devcontainer.sh down && .devcontainer/devcontainer.sh up` (volumes stay).
 - **`pnpm install` can't connect after the container has been up a long time:** the firewall resolves the npm registry's CDN addresses once, at start. Run `.devcontainer/devcontainer.sh stop && .devcontainer/devcontainer.sh up`.
 - **e2e says Chromium is missing after a Playwright bump:** the firewall blocks Playwright's CDN, so run `.devcontainer/devcontainer.sh rebuild` (the download runs again on create). If the bump needs new system libraries, also bump `PLAYWRIGHT_VERSION` in the Dockerfile.
-- **`Bind for 127.0.0.1:5173 failed: port is already allocated`:** another stack (a host `pnpm dev`, `docker compose up`, or another dev container) has 5173. Stop it, or set `WEB_HOST_PORT` in `.devcontainer/.env`.
-- **Phone testing on the LAN:** the published port is bound to `127.0.0.1` only. For LAN access, run the web app on the host, or change the `postgres` ports entry in `.devcontainer/docker-compose.yml` to `"5173:5173"`.
+- **`Bind for 127.0.0.1:5175 failed: port is already allocated`:** something else on the host has 5175. Stop it, or set `WEB_HOST_PORT` in `.devcontainer/.env`.
+- **Phone testing on the LAN:** the published port is bound to `127.0.0.1` only. For LAN access, run the web app on the host, or change the `postgres` ports entry in `.devcontainer/docker-compose.yml` to `"5175:5173"`.
