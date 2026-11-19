@@ -104,6 +104,9 @@ describe("isLocalDatabaseUrl edge cases", () => {
 
   it.each([
     "postgres://localhost@evil.com/db",
+    // postgres.js splits userinfo at the first `@` and would dial evil.com.
+    "postgres://u:p@evil.com,x@localhost/db",
+    "postgres://u:p@evil.com@localhost/db",
     "postgres://u@evil.com/x?host=localhost",
     "postgres://localhost:pw@evil.com/db",
     "postgres://u@localhost./x",

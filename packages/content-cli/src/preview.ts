@@ -30,6 +30,10 @@ const TARGET_PARAMS = ["hostaddr", "port", "service"];
  * empty host, non-loopback IP, any other name) is refused. No DNS lookups.
  */
 export function isLocalDatabaseUrl(url: string): boolean {
+  // WHATWG URL splits userinfo at the last `@`, postgres.js at the first, and postgres.js reads
+  // a comma there as a host list; refuse any raw authority where the two could disagree.
+  const authority = /^[^:/?#]+:\/\/([^/?#]*)/.exec(url)?.[1] ?? "";
+  if (authority.includes(",") || authority.split("@").length > 2) return false;
   let parsed: URL;
   try {
     parsed = new URL(url);
