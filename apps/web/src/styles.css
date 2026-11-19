@@ -191,6 +191,12 @@ button.primary,
   border-bottom: 1px solid var(--border);
   margin-bottom: 6px;
   overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.user-menu-who .badge {
+  margin-left: 6px;
 }
 .user-menu-item {
   display: block;
