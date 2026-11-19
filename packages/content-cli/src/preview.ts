@@ -19,6 +19,13 @@ export function splitPreviewFlag(argv: string[]): { preview: boolean; args: stri
 }
 
 /**
+ * Query params that change where a connection goes. postgres.js dials the URL hostname and
+ * only forwards these as startup parameters, but libpq and other clients honour them, so any
+ * of them makes the URL not provably local.
+ */
+const TARGET_PARAMS = ["hostaddr", "port", "service"];
+
+/**
  * Fails closed: anything we can't positively identify as local (unparseable, multi-host,
  * empty host, non-loopback IP, any other name) is refused. No DNS lookups.
  */
@@ -29,14 +36,18 @@ export function isLocalDatabaseUrl(url: string): boolean {
   } catch {
     return false;
   }
-  // libpq/postgres.js style `?host=` overrides the URL host; a unix socket dir is local.
-  const hostParam = parsed.searchParams.get("host");
-  if (hostParam !== null) {
-    return hostParam.startsWith("/") || LOCAL_DB_HOSTS.has(hostParam.toLowerCase());
-  }
+  if (TARGET_PARAMS.some((p) => parsed.searchParams.has(p))) return false;
   // An empty host would fall back to PGHOST, which could be anything.
   const host = parsed.hostname.toLowerCase();
-  return host !== "" && LOCAL_DB_HOSTS.has(host);
+  if (host === "" || !LOCAL_DB_HOSTS.has(host)) return false;
+  // libpq's `?host=` overrides the URL host, so it must also be one local value (a unix socket
+  // dir is local). A comma makes a multi-host list, and a repeated key is ambiguous.
+  const hostParams = parsed.searchParams.getAll("host");
+  if (hostParams.length === 0) return true;
+  if (hostParams.length > 1) return false;
+  const [hostParam] = hostParams;
+  if (hostParam === undefined || hostParam.includes(",")) return false;
+  return hostParam.startsWith("/") || LOCAL_DB_HOSTS.has(hostParam.toLowerCase());
 }
 
 /** Names the host for an error message. Never the full URL: it contains the password. */
@@ -48,7 +59,9 @@ function describeHost(url: string | undefined): string {
   } catch {
     return "unparseable";
   }
-  return parsed.searchParams.get("host") ?? (parsed.hostname || "(empty)");
+  const host = parsed.hostname || "(empty)";
+  const hostParams = parsed.searchParams.getAll("host");
+  return hostParams.length > 0 ? `${host} (?host=${hostParams.join("&host=")})` : host;
 }
 
 export function assertPreviewDatabase(url: string | undefined): void {

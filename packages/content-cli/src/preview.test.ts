@@ -70,7 +70,6 @@ describe("isLocalDatabaseUrl", () => {
     "postgres://u:p@[::1]:5432/x",
     "postgres://u:p@LOCALHOST/x",
     "postgres://u@localhost/fixedstep_e2e",
-    "postgres://u:p@x/db?host=/var/run/postgresql",
   ])("accepts %s", (url) => {
     expect(isLocalDatabaseUrl(url)).toBe(true);
   });
@@ -81,6 +80,8 @@ describe("isLocalDatabaseUrl", () => {
     "postgres://u:p@postgres.example.com/x",
     "postgres://u:p@localhost.evil.com/x",
     "postgres://u:p@localhost/db?host=10.1.2.3",
+    // postgres.js dials the URL hostname and ignores ?host=, so a local ?host= can't vouch for it.
+    "postgres://u:p@x/db?host=/var/run/postgresql",
     "postgres:///db",
     "not a url",
     "postgres://u:p@a:5432,b:5432/db",
@@ -95,7 +96,6 @@ describe("isLocalDatabaseUrl edge cases", () => {
     "postgresql://u:p@LocalHost:5433/x",
     "postgres://u@[0:0:0:0:0:0:0:1]/x",
     "postgres://u@localhost/x?host=LOCALHOST",
-    "postgres://u@evil.com/x?host=localhost",
     "postgres://u@localhost/x?host=%2Fvar%2Frun%2Fpostgresql",
     "postgres://u@localhost:5432/x?sslmode=disable",
   ])("accepts %s", (url) => {
@@ -104,6 +104,7 @@ describe("isLocalDatabaseUrl edge cases", () => {
 
   it.each([
     "postgres://localhost@evil.com/db",
+    "postgres://u@evil.com/x?host=localhost",
     "postgres://localhost:pw@evil.com/db",
     "postgres://u@localhost./x",
     "postgres://u@loc%61lhost/x",
@@ -140,7 +141,7 @@ describe("assertPreviewDatabase", () => {
     expect(() => assertPreviewDatabase("not a url")).toThrow(/host is unparseable/);
   });
 
-  it("names the ?host= override, not the URL host, and hides the password", () => {
+  it("names the ?host= override and hides the password", () => {
     let message = "";
     try {
       assertPreviewDatabase("postgres://u:s3cret@localhost/x?host=evil.example");
@@ -149,6 +150,12 @@ describe("assertPreviewDatabase", () => {
     }
     expect(message).toContain("evil.example");
     expect(message).not.toContain("s3cret");
+  });
+
+  it("names the dialed URL host when a local ?host= is ignored", () => {
+    expect(() => assertPreviewDatabase("postgres://u:s3cret@evil.com/x?host=localhost")).toThrow(
+      /host is evil\.com \(\?host=localhost\)/,
+    );
   });
 
   it("throws when DATABASE_URL is unset", () => {
