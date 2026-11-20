@@ -6,17 +6,20 @@ import { LessonKind } from "@fixedstep/content-schema";
 import { createDb } from "@fixedstep/db";
 import { serializeBundle } from "./bundle";
 import { ContentError, loadContent } from "./load";
+import { asPreview, assertPreviewDatabase, splitPreviewFlag } from "./preview";
 import { initContentRepo, newLesson, PLATFORM_ROOT } from "./scaffold";
 import { syncContent } from "./sync";
 import { validateContent } from "./validate";
 
 const USAGE = `usage:
   fixedstep-content validate [content-dir]
-  fixedstep-content sync [content-dir]               (needs DATABASE_URL)
-  fixedstep-content dev [content-dir]                (needs DATABASE_URL; re-syncs on every save)
+  fixedstep-content sync [--preview] [content-dir]   (needs DATABASE_URL)
+  fixedstep-content dev [--preview] [content-dir]    (needs DATABASE_URL; re-syncs on every save)
   fixedstep-content bundle <content-dir> <out.json>  (validated bundle for POST /internal/content)
   fixedstep-content new <course>/<chapter>/<lesson> [${LessonKind.options.join("|")}]
   fixedstep-content init <dir>                       (new content repo skeleton)
+
+--preview: sync every course as published (local DATABASE_URL only); a plain sync/dev restores course.yaml
 
 content-dir defaults to $CONTENT_DIR, then content-sample. A relative CONTENT_DIR is resolved
 from the platform repo root; a relative argument from the directory pnpm was run in.`;
@@ -48,14 +51,15 @@ async function check(dir: string) {
   return findings.some((f) => f.level === "error") ? null : courses;
 }
 
-function openDb() {
+function openDb(preview = false) {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is required");
+  if (preview) assertPreviewDatabase(url);
   return createDb(url, { max: 1 });
 }
 
-async function dev(dir: string) {
-  const db = openDb();
+async function dev(dir: string, preview: boolean) {
+  const db = openDb(preview);
   let running = false;
   let again = false;
   const run = async () => {
@@ -68,10 +72,11 @@ async function dev(dir: string) {
       // Schema errors stop the sync; failing solutions don't, so a half-written lesson can be
       // previewed. Production publishes still refuse them.
       const courses = await load(dir);
-      await syncContent(db, courses);
+      await syncContent(db, preview ? asPreview(courses) : courses);
       const findings = await validateContent(courses);
       for (const f of findings) console.log(`${f.level.toUpperCase()} ${f.where}: ${f.message}`);
-      console.log(`synced at ${new Date().toLocaleTimeString()}; watching for changes…`);
+      const how = preview ? " (preview: all courses published locally)" : "";
+      console.log(`synced${how} at ${new Date().toLocaleTimeString()}; watching for changes…`);
     } catch (e) {
       console.error(e instanceof ContentError ? `content error: ${e.message}` : e);
     } finally {
@@ -94,7 +99,10 @@ async function dev(dir: string) {
 }
 
 async function main() {
-  const [command, arg, arg2] = process.argv.slice(2);
+  const { preview, args } = splitPreviewFlag(process.argv.slice(2));
+  const [command, arg, arg2] = args;
+  // Only sync and dev write to a database, so only they accept --preview.
+  if (preview && command !== "dev" && command !== "sync") usage();
   switch (command) {
     case "validate": {
       if (!(await check(contentDir(arg)))) process.exit(1);
@@ -103,17 +111,17 @@ async function main() {
     case "sync": {
       const courses = await check(contentDir(arg));
       if (!courses) process.exit(1);
-      const db = openDb();
+      const db = openDb(preview);
       try {
-        await syncContent(db, courses);
+        await syncContent(db, preview ? asPreview(courses) : courses);
       } finally {
         await db.$client.end();
       }
-      console.log("synced");
+      console.log(preview ? "synced (preview: all courses published locally)" : "synced");
       return;
     }
     case "dev":
-      return dev(contentDir(arg));
+      return dev(contentDir(arg), preview);
     case "bundle": {
       if (!arg || !arg2) usage();
       const courses = await check(contentDir(arg));

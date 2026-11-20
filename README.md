@@ -80,6 +80,7 @@ be the private content repo checked out next to this one:
 pnpm --filter @fixedstep/content-cli start init ../fixedstep-content   # once: new content repo
 echo CONTENT_DIR=../fixedstep-content >> .env                          # then restart compose
 scripts/in-docker.sh pnpm content:dev                       # re-sync on every save
+scripts/in-docker.sh pnpm content:preview                   # same, with published: false courses shown
 scripts/in-docker.sh pnpm content:new <course>/<chapter>/<lesson> sim   # reading|quiz|code|sim
 ```
 
@@ -87,6 +88,12 @@ scripts/in-docker.sh pnpm content:new <course>/<chapter>/<lesson> sim   # readin
 repo's current commit (`PLATFORM_REF`; push that commit first). `content:dev` syncs even when
 a solution fails, so lessons can be previewed while being written; `content:validate` and CI
 don't allow that.
+
+`content:preview` is `content:dev` with every course synced as published, so you can play a
+`published: false` course without editing `course.yaml`. It only runs against a local database
+(`localhost`, `127.0.0.1`, `::1` or the compose `postgres` host; don't point it at a tunnel to a
+shared database); `bundle` and the publish workflow ignore it. Run `content:sync` (or
+`content:dev`) afterwards to restore the real `published` values.
 
 Prefer running on the host? `pnpm install && pnpm db:up && pnpm db:migrate && pnpm content:sync && pnpm dev`
 works too. Host and containers share one `node_modules` (and a repo-local `.pnpm-store/`), so you

@@ -30,6 +30,7 @@ Then, from the platform repo:
 ```sh
 docker compose up                                   # app on http://localhost:5173
 scripts/in-docker.sh pnpm content:dev               # re-syncs this repo on every save
+scripts/in-docker.sh pnpm content:preview           # same, showing published: false courses
 pnpm content:new my-course/first-chapter/hello sim  # reading | quiz | code | sim
 pnpm content:validate                               # what CI runs
 ```
